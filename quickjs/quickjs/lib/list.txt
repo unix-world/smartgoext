@@ -1,0 +1,2 @@
+linux/x86_64/libquickjs.a
+linux/x86_64/libquickjs.lto.a

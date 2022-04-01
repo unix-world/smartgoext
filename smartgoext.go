@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220323.1640 :: STABLE
+// r.20220402.0148 :: STABLE
 
 package smartgoext
 
@@ -36,7 +36,7 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 	//-- local defines
 
 	const (
-		THE_VERSION = "r.20220323.1440"
+		THE_VERSION = "r.20220402.0148"
 
 		CONN_HOST = "0.0.0.0"
 		CONN_PORT = 13080
@@ -90,7 +90,7 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 	//-- for web
 
 	var serverSignature bytes.Buffer
-	serverSignature.WriteString("WebDAV GO Server " + THE_VERSION + "\n")
+	serverSignature.WriteString("GO WebDAV Server " + THE_VERSION + "\n")
 	serverSignature.WriteString("(c) 2020-2022 unix-world.org" + "\n")
 	serverSignature.WriteString("\n")
 	if(disableUnsecure != true) {
@@ -103,7 +103,7 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 	//-- for console
 
 	fmt.Println("===========================================================================")
-	fmt.Println("WebDAV GO Server " + THE_VERSION)
+	fmt.Println("GO WebDAV Server " + THE_VERSION)
 	fmt.Println("---------------------------------------------------------------------------")
 	fmt.Println("Current Path: " + string(path))
 	fmt.Println("DAV Folder: " + STORAGE_DIR)
@@ -125,9 +125,9 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 		LockSystem: webdav.NewMemLS(),
 		Logger: func(r *http.Request, err error) {
 			if err != nil {
-				log.Printf("[WARNING] WebDAV GO Server :: WEBDAV.ERROR: %s [%s %s %s] %s [%s] %s\n", err, r.Method, r.URL, r.Proto, "*", r.Host, r.RemoteAddr)
+				log.Printf("[WARNING] GO WebDAV Server :: WEBDAV.ERROR: %s [%s %s %s] %s [%s] %s\n", err, r.Method, r.URL, r.Proto, "*", r.Host, r.RemoteAddr)
 			} else {
-				log.Printf("[OK] WebDAV GO Server :: WEBDAV [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, "*", r.Host, r.RemoteAddr)
+				log.Printf("[OK] GO WebDAV Server :: WEBDAV [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, "*", r.Host, r.RemoteAddr)
 			}
 		},
 	}
@@ -138,13 +138,13 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 			statusCode = 404
 			w.WriteHeader(statusCode)
 			w.Write([]byte("404 Not Found\n"))
-			log.Printf("[ERROR] WebDAV GO Server :: DEFAULT.ERROR [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
+			log.Printf("[ERROR] GO WebDAV Server :: DEFAULT.ERROR [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
 			return
 		}
-		log.Printf("[OK] WebDAV GO Server :: DEFAULT [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
+		log.Printf("[OK] GO WebDAV Server :: DEFAULT [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
 		w.Header().Set("Content-Type", smart.HTML_CONTENT_HEADER)
 		w.WriteHeader(statusCode) // status code must be after content type
-		var titleText string = "WebDAV GO Server " + THE_VERSION
+		var titleText string = "GO WebDAV Server " + THE_VERSION
 		var headHtml string = "<style>" + "\n" + "div.status { text-align:center; margin:10px; cursor:help; }" + "\n" + "div.signature { background:#778899; color:#FFFFFF; font-size:2rem; font-weight:bold; text-align:center; border-radius:3px; padding:10px; margin:20px; }" + "\n" + "</style>"
 		var bodyHtml string = `<div class="status"><img alt="Status: Up and Running ..." title="Status: Up and Running ..." width="96" height="96" src="data:image/svg+xml,` + smart.EscapeHtml(smart.EscapeUrl(smart.SVG_SPIN)) + `"></div>` + "\n" + `<div class="signature">` + "\n" + "<pre>" + "\n" + smart.EscapeHtml(serverSignature.String()) + "</pre>" + "\n" + "</div>"
 		w.Write([]byte(smart.HtmlSimpleTemplate(titleText, headHtml, bodyHtml)))
@@ -153,10 +153,10 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 	// http version handler
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		var statusCode = 203
-		log.Printf("[OK] WebDAV GO Server :: VERSION [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
+		log.Printf("[OK] GO WebDAV Server :: VERSION [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
 		// plain/text
 		w.WriteHeader(statusCode)
-		w.Write([]byte("WebDAV GO Server " + THE_VERSION + "\n"))
+		w.Write([]byte("GO WebDAV Server " + THE_VERSION + "\n"))
 	})
 
 	// webdav handler
@@ -165,10 +165,10 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 		user, pass, ok := r.BasicAuth()
 		// check if basic auth and if credentials match
 		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(authUser)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(authPass)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="WebDAV GO Server Storage Area"`)
+			w.Header().Set("WWW-Authenticate", `Basic realm="GO WebDAV Server Storage Area"`)
 			w.WriteHeader(401) // status code must be after set headers
 			w.Write([]byte("401 Unauthorized\n"))
-			log.Printf("[WARNING] WebDAV GO Server :: AUTH.FAILED [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, "401", r.Host, r.RemoteAddr)
+			log.Printf("[WARNING] GO WebDAV Server :: AUTH.FAILED [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, "401", r.Host, r.RemoteAddr)
 			return
 		}
 		// if all ok above (basic auth + credentials ok, serve ...)
@@ -205,23 +205,31 @@ func WebdavServer(authUser string, authPass string, httpAddr string, httpPort ui
 
 //-----
 
-func QuickJsEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) (jsEvErr string, jsEvRes string) {
+
+type jsQuickEvalResult struct {
+	jsEvErr string
+	jsEvRes string
+}
+
+
+func quickDoJsEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) jsQuickEvalResult {
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
 	if(jsMemMB < 2) {
-		return "ERR: Minimum Memory Size for JS Eval Code is 2MB", ""
+		return jsQuickEvalResult{ jsEvErr: "ERR: Minimum Memory Size for JS Eval Code is 2MB", jsEvRes: "" }
 	} else if(jsMemMB > 1024) {
-		return "ERR: Minimum Memory Size for JS Eval Code is 1024MB", ""
+		return jsQuickEvalResult{ jsEvErr: "ERR: Minimum Memory Size for JS Eval Code is 1024MB", jsEvRes: "" }
 	} //end if else
 
 	if(jsInputData == nil) {
 		jsInputData = map[string]string{}
-	}
+	} //end if
 
 	//--
 	quickjsCheck := func(err error, result quickjs.Value) (theErr string, theCause string, theStack string) {
+		//--
 		if err != nil {
 			var evalErr *quickjs.Error
 			var cause string = ""
@@ -229,13 +237,16 @@ func QuickJsEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]strin
 			if errors.As(err, &evalErr) {
 				cause = evalErr.Cause
 				stack = evalErr.Stack
-			}
+			} //end if
 			return err.Error(), cause, stack
-		}
+		} //end if
+		//--
 		if(result.IsException()) {
 			return "WARN: JS Exception !", "", ""
-		}
+		} //end if
+		//--
 		return "", "", ""
+		//--
 	} //end function
 	//--
 
@@ -285,7 +296,7 @@ func QuickJsEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]strin
 	defer jsvm.Free()
 	var MB uint32 = 1 << 10 << 10
 	var vmMem uint32 = uint32(jsMemMB) * MB
-	log.Println("[DEBUG] Settings: JsVm Memory Limit to", jsMemMB, "MB")
+	log.Println("[DEBUG] Settings: JsVm Memory Limit:", jsMemMB, "MB")
 	jsvm.SetMemoryLimit(vmMem)
 	//--
 	context := jsvm.NewContext()
@@ -315,14 +326,41 @@ func QuickJsEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]strin
 	defer result.Free()
 	jsErr, _, _ := quickjsCheck(err, result)
 	if(jsErr != "") {
-		return "ERR: JS Eval Error: " + "`" + jsErr + "`", ""
+		return jsQuickEvalResult{ jsEvErr: "ERR: JS Eval Error: " + "`" + jsErr + "`", jsEvRes: "" }
 	} //end if
 	//--
 
 	//--
-	return "", result.String()
+	return jsQuickEvalResult{ jsEvErr: "", jsEvRes: result.String() }
 	//--
 
+} //END FUNCTION
+
+
+func QuickJsEvalCode(jsCode string, stopTimeout uint, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) (jsEvErr string, jsEvRes string) {
+	//-- a reasonable execution timeout is 5 minutes ... but it depends
+	if(stopTimeout > 86400) {
+		return "QuickJsEvalCode: Max Javascript Code Execution TimeOut that can be set is 86400 second(s)", "" // max execution timeout: 24 hours
+	} else if(stopTimeout < 1) {
+		return "QuickJsEvalCode: Min Javascript Code Execution TimeOut that can be set is 86400 second(s)", "" // min execution timeout: 1 second
+	} //end if
+	//--
+	log.Println("[DEBUG] Settings: JsVm Execution Timeout Limit:", stopTimeout, "second(s)")
+	//--
+	c1 := make(chan jsQuickEvalResult, 1)
+	//--
+	go func() {
+		jsQuickEvalResult := quickDoJsEvalCode(jsCode, jsMemMB, jsInputData, jsExtendMethods, jsBinaryCodePreload) // (jsEvErr string, jsEvRes string)
+		c1 <- jsQuickEvalResult
+	}()
+	//--
+	select {
+		case res := <-c1:
+			return res.jsEvErr, res.jsEvRes
+		case <-time.After(time.Duration(stopTimeout) * time.Second):
+			return "QuickJsEvalCode: Javascript Code Execution reached the Maximum allowed TimeOut Limit (as set), after " + smart.ConvertUIntToStr(stopTimeout) + " second(s) ...", ""
+	} //end select
+	//--
 } //END FUNCTION
 
 

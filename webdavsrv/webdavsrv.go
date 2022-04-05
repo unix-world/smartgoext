@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebDAV Server :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220403.1947 :: STABLE
+// r.20220405.0521 :: STABLE
 
 package webdavsrv
 
@@ -19,6 +19,7 @@ import (
 	"golang.org/x/net/webdav"
 
 	smart "github.com/unix-world/smartgo"
+	assets "github.com/unix-world/smartgo/web-assets"
 )
 
 const (
@@ -37,7 +38,7 @@ const (
 )
 
 
-func WebdavServerListenAndServe(authUser string, authPass string, httpAddr string, httpPort uint16, httpsPort uint16, serveSecure bool, disableUnsecure bool, certifPath string, storagePath string) bool {
+func WebdavServerRun(authUser string, authPass string, httpAddr string, httpPort uint16, httpsPort uint16, serveSecure bool, disableUnsecure bool, certifPath string, storagePath string) bool {
 
 	//-- auth user / pass
 
@@ -162,8 +163,8 @@ func WebdavServerListenAndServe(authUser string, authPass string, httpAddr strin
 		w.WriteHeader(statusCode) // status code must be after content type
 		var titleText string = "GO WebDAV Server " + THE_VERSION
 		var headHtml string = "<style>" + "\n" + "div.status { text-align:center; margin:10px; cursor:help; }" + "\n" + "div.signature { background:#778899; color:#FFFFFF; font-size:2rem; font-weight:bold; text-align:center; border-radius:3px; padding:10px; margin:20px; }" + "\n" + "</style>"
-		var bodyHtml string = `<div class="status"><img alt="Status: Up and Running ..." title="Status: Up and Running ..." width="64" height="64" src="data:image/svg+xml,` + smart.EscapeHtml(smart.EscapeUrl(smart.ReadAsset("svg/loading-spin.svg"))) + `"></div>` + "\n" + `<div class="signature">` + "\n" + "<pre>" + "\n" + smart.EscapeHtml(serverSignature.String()) + "</pre>" + "\n" + "</div>"
-		w.Write([]byte(smart.HtmlStaticTemplate(titleText, headHtml, bodyHtml)))
+		var bodyHtml string = `<div class="status"><img alt="Status: Up and Running ..." title="Status: Up and Running ..." width="64" height="64" src="data:image/svg+xml,` + smart.EscapeHtml(smart.EscapeUrl(assets.ReadWebAsset("lib/framework/img/loading-spin.svg"))) + `"></div>` + "\n" + `<div class="signature">` + "\n" + "<pre>" + "\n" + smart.EscapeHtml(serverSignature.String()) + "</pre>" + "\n" + "</div>"
+		w.Write([]byte(assets.HtmlStandaloneTemplate(titleText, headHtml, bodyHtml)))
 	})
 
 	// http version handler

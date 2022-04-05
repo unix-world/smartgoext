@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220402.2226 :: STABLE
+// r.20220404.1452 :: STABLE
 
 package quickjsvm
 
@@ -28,10 +28,10 @@ type quickJsVmEvalResult struct {
 
 func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) quickJsVmEvalResult {
 
-	//--
+	//-- safety lock: dealing with QuickJs C methods req. this
 	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	//--
+//	defer runtime.UnlockOSThread() // if the calling goroutine exits without unlocking the thread, the thread will be terminated ; thus is safer to not reuse this kind of threads to avoid C garbage, so close any thread using this method after this method returns !!
+	//-- #safety lock
 
 	//--
 	if(jsMemMB < 2) {
@@ -107,7 +107,7 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 			for xx, _ := range jsonStruct {
 				keys = append(keys, xx)
 			} //end for
-			sort.Strings(keys)
+			sort.Strings(keys) // need to be added in order {{{SYNC-GOLANG-ORDERED-RANGE-BY-KEYS}}}
 			for _, zz := range keys {
 				txt += jsonStruct[zz].(string) + " "
 			} //end for
@@ -143,12 +143,17 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 		globals.SetFunction("SmartJsVmX_" + k, v.(func(*quickjs.Context, quickjs.Value, []quickjs.Value)(quickjs.Value)))
 	} //end for
 	//--
-	for y, b := range jsBinaryCodePreload {
-		if(b != nil) {
-			log.Println("[DEBUG] JsVm Pre-Loading Binary Opcode JS:", y)
-			bload, _ := context.EvalBinary(b, quickjs.EVAL_GLOBAL)
-			defer bload.Free()
-		} //end if
+	keys := make([]string, 0)
+	for xx, _ := range jsBinaryCodePreload {
+		keys = append(keys, xx)
+	} //end for
+	sort.Strings(keys) // need to be loaded in order {{{SYNC-GOLANG-ORDERED-RANGE-BY-KEYS}}}
+	var i int = 0
+	for _, zz := range keys {
+		log.Println("[DEBUG] JsVm Pre-Loading Binary Opcode JS:", zz, "@", i)
+		i++
+		bload, _ := context.EvalBinary(jsBinaryCodePreload[zz], quickjs.EVAL_GLOBAL)
+		defer bload.Free()
 	} //end for
 	//--
 	result, err := context.Eval(jsCode, quickjs.EVAL_GLOBAL) // quickjs.EVAL_STRICT

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220403.2025 :: STABLE
+// r.20220405.0608 :: STABLE
 
 package websocketmsgpak
 
@@ -10,7 +10,6 @@ package websocketmsgpak
 import (
 	"os"
 	"os/signal"
-	"runtime"
 
 	"log"
 	"fmt"
@@ -23,9 +22,11 @@ import (
 
 	"net/http"
 
-	smart "github.com/unix-world/smartgo"
-	uid   "github.com/unix-world/smartgo/uuid"
-	b58   "github.com/unix-world/smartgo/base58"
+	smart     "github.com/unix-world/smartgo"
+	uid       "github.com/unix-world/smartgo/uuid"
+	b58       "github.com/unix-world/smartgo/base58"
+	assets    "github.com/unix-world/smartgo/web-assets"
+	srvassets "github.com/unix-world/smartgo/web-srvassets"
 
 	"github.com/unix-world/smartgoext/gorilla/websocket"
 )
@@ -34,7 +35,7 @@ import (
 //-- msgpak
 
 
-const VERSION = "r.20220403.2025"
+const VERSION = "r.20220405.0608"
 
 
 type HandleMessagesFunc func(bool, string, string, string, string) string
@@ -229,7 +230,7 @@ func msgPakHandleMessage(conn *websocket.Conn, isServer bool, id string, remoteI
 //-- helper
 
 
-func MsgPakGenerateUUID() string {
+func msgPakGenerateUUID() string {
 	//--
 	var theTime string = ""
 	dtObjUtc := smart.DateTimeStructUtc("")
@@ -252,11 +253,15 @@ func MsgPakGenerateUUID() string {
 //-- server
 
 
-func MsgPakServerListenAndServe(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
+func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
 
 	//-- checks
 
 	serverID = smart.StrTrimWhitespaces(serverID)
+	if(serverID == "") {
+		serverID = msgPakGenerateUUID()
+		log.Println("[NOTICE] MsgPak Server: No Server ID provided, assigning an UUID as ID:", serverID)
+	} //end if
 	if(serverID == "") {
 		log.Println("[ERROR] MsgPak Server: Empty Server ID")
 		return false
@@ -391,9 +396,6 @@ func MsgPakServerListenAndServe(serverID string, useTLS bool, certifPath string,
 	} //end function
 
 	srvHandlerMsgPack := func(w http.ResponseWriter, r *http.Request) {
-		//-- lock thread
-		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
 		//-- check auth
 		var isAuth bool = false
 		aUsr, aPass, aOK := r.BasicAuth()
@@ -472,19 +474,29 @@ func MsgPakServerListenAndServe(serverID string, useTLS bool, certifPath string,
 			return
 		} //end if
 		//--
-		custommsg, ok := r.URL.Query()["msg"]
-		if(!ok || (len(custommsg[0]) < 1) || (len(custommsg[0]) > 255) || (smart.StrTrimWhitespaces(custommsg[0]) == "") || (!smart.StrRegexMatchString(`^[_a-zA-Z0-9\-\.]+$`, custommsg[0]))) {
+		var isRequestOk bool = true
+		//--
+		custommsg, okmsg := r.URL.Query()["msg"] // min 1 char ; max 255 chars ; must contain only a-z A-Z 0-9 - . :
+		if(!okmsg || (len(custommsg[0]) < 1) || (len(custommsg[0]) > 255) || (smart.StrTrimWhitespaces(custommsg[0]) == "") || (!smart.StrRegexMatchString(`^[a-zA-Z0-9\-\.\:]+$`, custommsg[0]))) {
+			isRequestOk = false
+		} //end if
+		customdata, okdata := r.URL.Query()["data"] // max 16MB
+		if(!okdata || (len(customdata[0]) > 16777216)) {
+			isRequestOk = false
+		} //end if
+		//--
+		if(isRequestOk != true) {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("400 Bad Request\n"))
 			return
 		} //end if
 		//--
 		customMessageCmd = "<" + smart.StrToUpper(smart.StrTrimWhitespaces(custommsg[0])) + ">"
-		customMessageDat = smart.Sha1(customMessageCmd) // "" ; TODO: get also this from params
+		customMessageDat = customdata[0]
 		//--
 		w.Header().Set("Content-Type", smart.HTML_CONTENT_HEADER)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(smart.HtmlStaticTemplate("Custom Message", "", `<h1>Custom Message</h1>` + `<div class="operation_success">` + smart.EscapeHtml(customMessageCmd) + `</div>` + "\n" + `<div class="operation_important">` + smart.EscapeHtml(customMessageDat) + `</div>`)))
+		w.Write([]byte(srvassets.HtmlServerTemplate("Custom Message", "", `<h1>Custom Message &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success">` + smart.EscapeHtml(customMessageCmd) + `</div>` + "\n" + `<div class="operation_important">` + smart.EscapeHtml(customMessageDat) + `</div>`)))
 		//--
 	} //end function
 
@@ -493,12 +505,13 @@ func MsgPakServerListenAndServe(serverID string, useTLS bool, certifPath string,
 		w.Header().Set("Refresh", "10")
 		w.Header().Set("Content-Type", smart.HTML_CONTENT_HEADER)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(smart.HtmlStaticTemplate("WS Server: HTTP(S)/WsMux", "", `<h1>WS Server: HTTP(S)/WsMux # ` + smart.EscapeHtml(VERSION) + `</h1>` + `<div><img width="48" height="48" src="data:image/svg+xml,` + smart.EscapeHtml(smart.EscapeUrl(smart.ReadAsset("svg/loading-spin.svg"))) + `"></div>` + `<hr>` + `<small>(c) 2021-2022 unix-world.org</small>`)))
+		w.Write([]byte(assets.HtmlStandaloneTemplate("WS Server: HTTP(S)/WsMux", "", `<h1>WS Server: HTTP(S)/WsMux # ` + smart.EscapeHtml(VERSION) + `</h1>` + `<div class="operation_info"><img width="48" height="48" src="lib/framework/img/loading-spin.svg"></div>` + `<hr>` + `<small>(c) 2021-2022 unix-world.org</small>`)))
 		//--
 	} //end function
 
 	http.HandleFunc("/msgpak", srvHandlerMsgPack)
 	http.HandleFunc("/msgsend", srvHandlerCustomMsg)
+	http.HandleFunc("/lib/", srvassets.WebAssetsHttpHandler)
 	http.HandleFunc("/", srvHandlerHome)
 
 	var srvAddr string = httpAddr + fmt.Sprintf(":%d", httpPort)
@@ -519,7 +532,7 @@ func MsgPakServerListenAndServe(serverID string, useTLS bool, certifPath string,
 //-- client
 
 
-func MsgPakClientListenAndConnectToServer(serverPool []string, clientID string, tlsMode string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, intervalReconnectSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
+func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, intervalReconnectSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
 
 	//--
 
@@ -528,6 +541,10 @@ func MsgPakClientListenAndConnectToServer(serverPool []string, clientID string, 
 	} //end if
 
 	clientID = smart.StrTrimWhitespaces(clientID)
+	if(clientID == "") {
+		clientID = msgPakGenerateUUID()
+		log.Println("[NOTICE] MsgPak Server: No Client ID provided, assigning an UUID as ID:", clientID)
+	} //end if
 	if(clientID == "") {
 		log.Println("[ERROR] MsgPak Client: Empty Client ID")
 		return false
@@ -639,9 +656,6 @@ func MsgPakClientListenAndConnectToServer(serverPool []string, clientID string, 
 	connectToServer := func(addr string) {
 		//--
 		defer smart.PanicHandler()
-		//--
-		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
 		//--
 		log.Println("[NOTICE] Connecting to Server:", addr, "TLS-MODE:", tlsMode)
 		//--

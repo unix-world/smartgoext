@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220404.1452 :: STABLE
+// r.20220408.1712 :: STABLE
 
 package quickjsvm
 
@@ -18,6 +18,8 @@ import (
 	"github.com/unix-world/smartgoext/quickjs"
 	smart "github.com/unix-world/smartgo"
 )
+
+const VERSION string = "r.20220408.1712"
 
 
 type quickJsVmEvalResult struct {

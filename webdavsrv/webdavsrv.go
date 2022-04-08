@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebDAV Server :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220405.0521 :: STABLE
+// r.20220408.1712 :: STABLE
 
 package webdavsrv
 
@@ -15,30 +15,30 @@ import (
 	"bytes"
 
 	"net/http"
-	"crypto/subtle"
 	"golang.org/x/net/webdav"
 
 	smart "github.com/unix-world/smartgo"
 	assets "github.com/unix-world/smartgo/web-assets"
+	smarthttputils 	"github.com/unix-world/smartgo/web-httputils"
 )
 
 const (
-	THE_VERSION = "r.20220403.1947"
+	THE_VERSION  string = "r.20220408.1712"
 
-	CONN_HOST = "127.0.0.1"
-	CONN_PORT = 13080
-	CONN_TLSPORT = 13443
+	CONN_HOST    string = "127.0.0.1"
+	CONN_PORT    uint16 = 13080
+	CONN_TLSPORT uint16 = 13443
 
-	STORAGE_DIR = "./wdav"
-	DAV_PATH = "/webdav"
+	STORAGE_DIR  string = "./wdav"
+	DAV_PATH     string = "/webdav"
 
-	TLS_PATH = "./ssl"
-	TLS_CERT = "cert.crt"
-	TLS_KEY = "cert.key"
+	TLS_PATH     string = "./ssl"
+	TLS_CERT     string = "cert.crt"
+	TLS_KEY      string = "cert.key"
 )
 
 
-func WebdavServerRun(authUser string, authPass string, httpAddr string, httpPort uint16, httpsPort uint16, serveSecure bool, disableUnsecure bool, certifPath string, storagePath string) bool {
+func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAddr string, httpPort uint16, httpsPort uint16, serveSecure bool, disableUnsecure bool, certifPath string, storagePath string) bool {
 
 	//-- auth user / pass
 
@@ -148,48 +148,33 @@ func WebdavServerRun(authUser string, authPass string, httpAddr string, httpPort
 
 	//-- handle methods
 
-	// http root handler
+	// http root handler : 202 | 404
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var statusCode = 202
 		if(r.URL.Path != "/") {
-			statusCode = 404
-			w.WriteHeader(statusCode)
-			w.Write([]byte("404 Not Found\n"))
-			log.Printf("[ERROR] GO WebDAV Server :: DEFAULT.ERROR [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
+			smarthttputils.HttpStatus404(w, r, "WebDAV Resource Not Found: `" + r.URL.Path + "`", false)
 			return
 		} //end if
-		log.Printf("[OK] GO WebDAV Server :: DEFAULT [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
-		w.Header().Set("Content-Type", smart.HTML_CONTENT_HEADER)
-		w.WriteHeader(statusCode) // status code must be after content type
 		var titleText string = "GO WebDAV Server " + THE_VERSION
 		var headHtml string = "<style>" + "\n" + "div.status { text-align:center; margin:10px; cursor:help; }" + "\n" + "div.signature { background:#778899; color:#FFFFFF; font-size:2rem; font-weight:bold; text-align:center; border-radius:3px; padding:10px; margin:20px; }" + "\n" + "</style>"
 		var bodyHtml string = `<div class="status"><img alt="Status: Up and Running ..." title="Status: Up and Running ..." width="64" height="64" src="data:image/svg+xml,` + smart.EscapeHtml(smart.EscapeUrl(assets.ReadWebAsset("lib/framework/img/loading-spin.svg"))) + `"></div>` + "\n" + `<div class="signature">` + "\n" + "<pre>" + "\n" + smart.EscapeHtml(serverSignature.String()) + "</pre>" + "\n" + "</div>"
-		w.Write([]byte(assets.HtmlStandaloneTemplate(titleText, headHtml, bodyHtml)))
+		log.Printf("[OK] GO WebDAV Server :: DEFAULT [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(202), r.Host, r.RemoteAddr)
+		smarthttputils.HttpStatus202(w, r, assets.HtmlStandaloneTemplate(titleText, headHtml, bodyHtml), "index.html", "", -1, "", "no-cache", nil)
 	})
 
-	// http version handler
+	// http version handler : 203
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		var statusCode = 203
-		log.Printf("[OK] GO WebDAV Server :: VERSION [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(statusCode), r.Host, r.RemoteAddr)
-		// plain/text
-		w.WriteHeader(statusCode)
-		w.Write([]byte("GO WebDAV Server " + THE_VERSION + "\n"))
+		log.Printf("[OK] GO WebDAV Server :: VERSION [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(203), r.Host, r.RemoteAddr)
+		smarthttputils.HttpStatus203(w, r, "GO WebDAV Server " + THE_VERSION + "\n", "version.txt", "", -1, "", "no-cache", nil)
 	})
 
-	// webdav handler
+	// webdav handler : all webdav status codes ...
 	http.HandleFunc(DAV_PATH+"/", func(w http.ResponseWriter, r *http.Request) {
-		// test if basic auth
-		user, pass, ok := r.BasicAuth()
-		// check if basic auth and if credentials match
-		if(!ok || subtle.ConstantTimeCompare([]byte(user), []byte(authUser)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(authPass)) != 1) {
-			w.Header().Set("WWW-Authenticate", `Basic realm="GO WebDAV Server Storage Area"`)
-			w.WriteHeader(401) // status code must be after set headers
-			w.Write([]byte("401 Unauthorized\n"))
-			log.Printf("[WARNING] GO WebDAV Server :: AUTH.FAILED [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, "401", r.Host, r.RemoteAddr)
+		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, "WebDAV Server: Storage Area", authUser, authPass, allowedIPs, false) // outputs: TEXT
+		if(authErr != "") {
+			log.Println("[WARNING] WebDAV Server / Storage Area :: Authentication Failed:", authErr)
 			return
 		} //end if
-		// if all ok above (basic auth + credentials ok, serve ...)
-		srv.ServeHTTP(w, r)
+		srv.ServeHTTP(w, r) // if all ok above (basic auth + credentials ok, serve ...)
 	})
 
 	// serve logic

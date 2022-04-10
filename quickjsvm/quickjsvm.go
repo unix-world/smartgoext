@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220408.1712 :: STABLE
+// r.20220410.0334 :: STABLE
 
 package quickjsvm
 
@@ -19,7 +19,7 @@ import (
 	smart "github.com/unix-world/smartgo"
 )
 
-const VERSION string = "r.20220408.1712"
+const VERSION string = "r.20220410.0334"
 
 
 type quickJsVmEvalResult struct {
@@ -174,7 +174,7 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 } //END FUNCTION
 
 
-func QuickJsVmRunCode(jsCode string, stopTimeout uint, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) (jsEvErr string, jsEvRes string) {
+func QuickJsVmRunCode(jsCode string, stopTimeout uint32, jsMemMB uint16, jsInputData map[string]string, jsExtendMethods map[string]interface{}, jsBinaryCodePreload map[string][]byte) (jsEvErr string, jsEvRes string) {
 	//-- check if Js Code is Empty
 	if(smart.StrTrimWhitespaces(jsCode) == "") {
 		return "QuickJsVmRunCode: Empty Javascript Code ...", ""
@@ -199,7 +199,7 @@ func QuickJsVmRunCode(jsCode string, stopTimeout uint, jsMemMB uint16, jsInputDa
 		case res := <-c1:
 			return res.jsEvErr, res.jsEvRes
 		case <-time.After(time.Duration(stopTimeout) * time.Second):
-			return "QuickJsVmRunCode: Javascript Code Execution reached the Maximum allowed TimeOut Limit (as set), after " + smart.ConvertUIntToStr(stopTimeout) + " second(s) ...", ""
+			return "QuickJsVmRunCode: Javascript Code Execution reached the Maximum allowed TimeOut Limit (as set), after " + smart.ConvertUInt32ToStr(stopTimeout) + " second(s) ...", ""
 	} //end select
 	//--
 } //END FUNCTION

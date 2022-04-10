@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebDAV Server :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220408.1712 :: STABLE
+// r.20220410.0334 :: STABLE
 
 package webdavsrv
 
@@ -23,11 +23,10 @@ import (
 )
 
 const (
-	THE_VERSION  string = "r.20220408.1712"
+	THE_VERSION  string = "r.20220410.0334"
 
 	CONN_HOST    string = "127.0.0.1"
 	CONN_PORT    uint16 = 13080
-	CONN_TLSPORT uint16 = 13443
 
 	STORAGE_DIR  string = "./wdav"
 	DAV_PATH     string = "/webdav"
@@ -38,7 +37,7 @@ const (
 )
 
 
-func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAddr string, httpPort uint16, httpsPort uint16, serveSecure bool, disableUnsecure bool, certifPath string, storagePath string) bool {
+func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAddr string, httpPort uint16, timeoutSeconds uint32, serveSecure bool, certifPath string, storagePath string) bool {
 
 	//-- auth user / pass
 
@@ -73,18 +72,18 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 		httpPort = CONN_PORT
 	} //end if
 
-	if(!smart.IsNetValidPortNum(int64(httpsPort))) {
-		httpsPort = CONN_TLSPORT
-	} //end if
-
 	//-- paths
 
-	certifPath = smart.StrTrimWhitespaces(certifPath)
-	if((certifPath == "") || (smart.PathIsBackwardUnsafe(certifPath) == true)) {
+	if(serveSecure == true) {
+		certifPath = smart.StrTrimWhitespaces(certifPath)
+		if((certifPath == "") || (smart.PathIsBackwardUnsafe(certifPath) == true)) {
+			certifPath = TLS_PATH
+		} //end if
+		certifPath = smart.PathGetAbsoluteFromRelative(certifPath)
+		certifPath = smart.PathAddDirLastSlash(certifPath)
+	} else {
 		certifPath = TLS_PATH
 	} //end if
-	certifPath = smart.PathGetAbsoluteFromRelative(certifPath)
-	certifPath = smart.PathAddDirLastSlash(certifPath)
 
 	storagePath = smart.StrTrimWhitespaces(storagePath)
 	if((storagePath == "") || (smart.PathIsBackwardUnsafe(storagePath) == true)) {
@@ -93,24 +92,17 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 	storagePath = smart.PathGetAbsoluteFromRelative(storagePath)
 	storagePath = smart.PathAddDirLastSlash(storagePath)
 
-	//-- test params
-
-	if(disableUnsecure == true && serveSecure != true) {
-		log.Println("[ERROR] WebDAV Server INIT: The both HTTP and HTTPS modes are disabled ... server will exit ...")
-		return false
-	} //end if
-
 	//-- for web
 
 	var serverSignature bytes.Buffer
 	serverSignature.WriteString("GO WebDAV Server " + THE_VERSION + "\n")
 	serverSignature.WriteString("(c) 2020-2022 unix-world.org" + "\n")
 	serverSignature.WriteString("\n")
-	if(disableUnsecure != true) {
-		serverSignature.WriteString("<URL> :: http://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + DAV_PATH + "/" + "\n")
-	} //end if
+
 	if(serveSecure == true) {
-		serverSignature.WriteString("<Secure URL> :: https://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpsPort) + DAV_PATH + "/" + "\n")
+		serverSignature.WriteString("<Secure URL> :: https://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + DAV_PATH + "/" + "\n")
+	} else {
+		serverSignature.WriteString("<URL> :: http://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + DAV_PATH + "/" + "\n")
 	} //end if
 
 	//-- for console
@@ -123,17 +115,20 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 	fmt.Println("DAV Folder: " + storagePath)
 	fmt.Println("WebDAV Path: " + DAV_PATH)
 	fmt.Println("---------------------------------------------------------------------------")
-	if(disableUnsecure != true) {
-		fmt.Println("Unsecure Listening at http://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + "/")
-	} //end if
 	if(serveSecure == true) {
-		fmt.Println("Secure Listening TLS at https://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpsPort) + "/")
+		fmt.Println("Secure Listening TLS at https://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + "/")
+	} else {
+		fmt.Println("Unsecure Listening at http://" + httpAddr + ":" + smart.ConvertUInt16ToStr(httpPort) + "/")
 	} //end if
 	fmt.Println("===========================================================================")
 
-	//-- handler
+	//-- server
 
-	srv := &webdav.Handler{
+	mux, srv := smarthttputils.HttpMuxServer(httpAddr + fmt.Sprintf(":%d", httpPort), timeoutSeconds, true) // force HTTP/1
+
+	//-- webdav handler
+
+	wdav := &webdav.Handler{
 		Prefix:     DAV_PATH,
 		FileSystem: webdav.Dir(STORAGE_DIR),
 		LockSystem: webdav.NewMemLS(),
@@ -146,10 +141,10 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 		},
 	}
 
-	//-- handle methods
+	//-- other handlers
 
 	// http root handler : 202 | 404
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if(r.URL.Path != "/") {
 			smarthttputils.HttpStatus404(w, r, "WebDAV Resource Not Found: `" + r.URL.Path + "`", false)
 			return
@@ -162,27 +157,26 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 	})
 
 	// http version handler : 203
-	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[OK] GO WebDAV Server :: VERSION [%s %s %s] %s [%s] %s\n", r.Method, r.URL, r.Proto, strconv.Itoa(203), r.Host, r.RemoteAddr)
 		smarthttputils.HttpStatus203(w, r, "GO WebDAV Server " + THE_VERSION + "\n", "version.txt", "", -1, "", "no-cache", nil)
 	})
 
 	// webdav handler : all webdav status codes ...
-	http.HandleFunc(DAV_PATH+"/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(DAV_PATH + "/", func(w http.ResponseWriter, r *http.Request) {
 		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, "WebDAV Server: Storage Area", authUser, authPass, allowedIPs, false) // outputs: TEXT
 		if(authErr != "") {
 			log.Println("[WARNING] WebDAV Server / Storage Area :: Authentication Failed:", authErr)
 			return
 		} //end if
-		srv.ServeHTTP(w, r) // if all ok above (basic auth + credentials ok, serve ...)
+		wdav.ServeHTTP(w, r) // if all ok above (basic auth + credentials ok, serve ...)
 	})
 
 	// serve logic
 
-	var theTlsCertPath string = certifPath + TLS_CERT
-	var theTlsKeyPath  string = certifPath + TLS_KEY
-
-	if(serveSecure == true) {
+	if(serveSecure == true) { // serve HTTPS
+		var theTlsCertPath string = certifPath + TLS_CERT
+		var theTlsKeyPath  string = certifPath + TLS_KEY
 		if(!smart.PathIsFile(theTlsCertPath)) {
 			log.Println("[ERROR] INIT TLS: No certificate crt found in current directory. Please provide a valid cert:", theTlsCertPath)
 			return false
@@ -191,19 +185,11 @@ func WebdavServerRun(allowedIPs string, authUser string, authPass string, httpAd
 			log.Println("[ERROR]: INIT TLS No certificate key found in current directory. Please provide a valid cert:", theTlsKeyPath)
 			return false
 		} //end if
-		log.Println("[NOTICE] ... serving HTTPS / TLS at " + httpAddr + " on port", httpsPort)
-		go http.ListenAndServeTLS(httpAddr + fmt.Sprintf(":%d", httpsPort), theTlsCertPath, theTlsKeyPath, nil)
-	} //end if
-	if(disableUnsecure != true) {
+		log.Println("[NOTICE] ... serving HTTPS / TLS at " + httpAddr + " on port", httpPort)
+		go srv.ListenAndServeTLS(theTlsCertPath, theTlsKeyPath)
+	} else { // serve HTTP
 		log.Println("[NOTICE] ... serving HTTP at " + httpAddr + " on port", httpPort)
-		go http.ListenAndServe(httpAddr + fmt.Sprintf(":%d", httpPort), nil)
-	} //end if
-
-	//-- final checks
-
-	if(disableUnsecure == true && serveSecure != true) {
-		log.Println("[ERROR] ... WebDAV NOT Started")
-		return false
+		go srv.ListenAndServe()
 	} //end if
 
 	//--

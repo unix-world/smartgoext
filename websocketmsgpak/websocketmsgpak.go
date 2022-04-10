@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220408.2358 :: STABLE
+// r.20220410.0450 :: STABLE
 
 package websocketmsgpak
 
@@ -15,10 +15,6 @@ import (
 	"log"
 	"fmt"
 	"time"
-
-	"crypto/tls"
-	"io/ioutil"
-	"crypto/x509"
 
 	"net/http"
 
@@ -38,18 +34,20 @@ import (
 
 
 const (
-	VERSION string = "r.20220408.2358"
+	VERSION string = "r.20220410.0450"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
 
-	WAIT_CLOSE_LIMIT_SECONDS uint32 = 2
+	WAIT_CLOSE_LIMIT_SECONDS uint32 = 2 		// default is 2
 
-	MAX_MSG_SIZE uint32 = 16 * 1000 * 1000 // 16 MB
-	MAX_QUEUE_MESSAGES uint8 = 100 // must be between: 1..255
+	MAX_MSG_SIZE uint32 = 16 * 1000 * 1000 		// 16 MB
+	MAX_QUEUE_MESSAGES uint8 = 100 				// must be between: 1..255
 
-	LIMIT_INTERVAL_SECONDS_MIN uint32 = 10 	// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
+	LIMIT_INTERVAL_SECONDS_MIN uint32 = 10 		// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
 	LIMIT_INTERVAL_SECONDS_MAX uint32 = 3600 	// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
+
+	CERTIFICATES_DEFAULT_PATH = "./ssl"
 )
 
 
@@ -400,7 +398,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 
 	certifPath = smart.StrTrimWhitespaces(certifPath)
 	if((certifPath == "") || (smart.PathIsBackwardUnsafe(certifPath) == true)) {
-		certifPath = "./ssl"
+		certifPath = CERTIFICATES_DEFAULT_PATH
 	} //end if
 	certifPath = smart.PathGetAbsoluteFromRelative(certifPath)
 	certifPath = smart.PathAddDirLastSlash(certifPath)
@@ -735,19 +733,23 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 	} //end function
 
-	http.HandleFunc("/msgpak", srvHandlerMsgPack)
-	http.HandleFunc("/msgsend", srvHandlerCustomMsg)
-	http.HandleFunc("/lib/", webAssetsHttpHandler)
-	http.HandleFunc("/", srvHandlerHome)
-
 	var srvAddr string = httpAddr + fmt.Sprintf(":%d", httpPort)
+	mux, srv := smarthttputils.HttpMuxServer(srvAddr, intervalMsgSeconds, true) // force HTTP/1
+
+	mux.HandleFunc("/msgpak", srvHandlerMsgPack)
+	mux.HandleFunc("/msgsend", srvHandlerCustomMsg)
+	mux.HandleFunc("/lib/", webAssetsHttpHandler)
+	mux.HandleFunc("/", srvHandlerHome)
+
 	if(useTLS == true) {
 		log.Println("Starting WS Server:", "wss://" + srvAddr + "/msgpak", "@", "HTTPS/WsMux/TLS", "#", VERSION)
 		log.Println("[NOTICE] Certificates Path:", certifPath)
-		go log.Fatal("[ERROR]", http.ListenAndServeTLS(srvAddr, certifPath + "cert.crt", certifPath + "cert.key", nil))
+	//	go log.Fatal("[ERROR]", http.ListenAndServeTLS(srvAddr, certifPath + "cert.crt", certifPath + "cert.key", nil))
+		go log.Fatal("[ERROR]", srv.ListenAndServeTLS(certifPath + "cert.crt", certifPath + "cert.key"))
 	} else {
 		log.Println("Starting WS Server:", "ws://" + srvAddr + "/msgpak", "@", "HTTP/WsMux/Insecure", "#", VERSION)
-		go log.Fatal("[ERROR]", http.ListenAndServe(srvAddr, nil))
+	//	go log.Fatal("[ERROR]", http.ListenAndServe(srvAddr, nil))
+		go log.Fatal("[ERROR]", srv.ListenAndServe())
 	} //end if else
 
 	return true
@@ -758,7 +760,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 //-- client
 
 
-func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
+func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certifPath string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
 
 	//--
 
@@ -775,6 +777,13 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, authU
 		log.Println("[ERROR] MsgPak Client: Empty Client ID")
 		return false
 	} //end if
+
+	certifPath = smart.StrTrimWhitespaces(certifPath)
+	if((certifPath == "") || (smart.PathIsBackwardUnsafe(certifPath) == true)) {
+		certifPath = CERTIFICATES_DEFAULT_PATH
+	} //end if
+	certifPath = smart.PathGetAbsoluteFromRelative(certifPath)
+	certifPath = smart.PathAddDirLastSlash(certifPath)
 
 	authUsername = smart.StrTrimWhitespaces(authUsername)
 	if(authUsername == "") {
@@ -885,7 +894,7 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, authU
 		//--
 		defer smart.PanicHandler()
 		//--
-		log.Println("[NOTICE] Connecting to Server:", addr, "TLS-MODE:", tlsMode)
+		log.Println("[NOTICE] Connecting to Server:", addr, "MODE:", tlsMode)
 		//--
 		addr = smart.StrTrimWhitespaces(addr)
 		if(addr == "") {
@@ -908,37 +917,38 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, authU
 			return
 		} //end if
 		//--
+		if((tlsMode == "tls") || (tlsMode == "tls:noverify")) {
+			log.Println("[NOTICE] Certificates Path:", certifPath)
+		} //end if
+		//--
 		socketPrefix := "ws://"
 		socketSuffix := "/msgpak"
 		var securewebsocket websocket.Dialer
-		if(tlsMode == "tls") {
+		if(tlsMode == "tls:server") {
 			socketPrefix = "wss://"
-			roots := x509.NewCertPool()
-			var rootPEM string = ""
-			crt, errCrt := ioutil.ReadFile("./cert.crt")
-			if(errCrt != nil) {
-				log.Fatal("[ERROR] Failed to read root certificate CRT")
+			crt, errCrt := smart.SafePathFileRead(certifPath + "cert.crt", true)
+			if(errCrt != "") {
+				log.Fatal("[ERROR] Failed to read root certificate CRT: " + errCrt)
 			} //end if
-			key, errKey := ioutil.ReadFile("./cert.key")
-			if(errKey != nil) {
-				log.Fatal("[ERROR] to read root certificate KEY")
+			key, errKey := smart.SafePathFileRead(certifPath + "cert.key", true)
+			if(errKey != "") {
+				log.Fatal("[ERROR] to read root certificate KEY: " + errKey)
 			} //end if
-			rootPEM = string(crt) + "\n" + string(key)
-			ok := roots.AppendCertsFromPEM([]byte(rootPEM))
-			if(!ok) {
-				log.Fatal("[ERROR] Failed to parse root certificate")
-			} //end if
-			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS")
-			securewebsocket = websocket.Dialer{TLSClientConfig: &tls.Config{RootCAs: roots}}
+			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS:WithServerCertificate")
+			securewebsocket = websocket.Dialer{TLSClientConfig: smarthttputils.TlsConfigClient(false, smart.StrTrimWhitespaces(string(crt)) + "\n" + smart.StrTrimWhitespaces(string(key)))}
 		} else if(tlsMode == "tls:noverify") {
 			socketPrefix = "wss://"
-			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS:NoVerify")
-			securewebsocket = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS:InsecureSkipVerify")
+			securewebsocket = websocket.Dialer{TLSClientConfig: smarthttputils.TlsConfigClient(true, "")}
+		} else if(tlsMode == "tls") {
+			socketPrefix = "wss://"
+			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS")
+			securewebsocket = websocket.Dialer{TLSClientConfig: smarthttputils.TlsConfigClient(false, "")}
 		} else { // insecure
 			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTP/WsMux/Insecure")
 			securewebsocket = websocket.Dialer{}
 		} //end if else
-		h := http.Header{"Authorization": {"Basic " + smart.Base64Encode(authUsername + ":" + authPassword)}}
+		h := smarthttputils.HttpClientAuthBasicHeader(authUsername, authPassword)
 	//	h = nil
 		//--
 		conn, response, err := securewebsocket.Dial(socketPrefix + addr + socketSuffix, h)

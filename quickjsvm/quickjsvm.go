@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220410.0334 :: STABLE
+// r.20220411.0430 :: STABLE
 
 package quickjsvm
 
@@ -19,7 +19,7 @@ import (
 	smart "github.com/unix-world/smartgo"
 )
 
-const VERSION string = "r.20220410.0334"
+const VERSION string = "r.20220411.0430"
 
 
 type quickJsVmEvalResult struct {
@@ -102,7 +102,7 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 		} //end for
 		jsonArgs := smart.JsonEncode(theArgs)
 		//--
-		jsonStruct := smart.JsonDecode(jsonArgs)
+		jsonStruct := smart.JsonObjDecode(jsonArgs)
 		if(jsonStruct != nil) {
 			var txt string = ""
 			keys := make([]string, 0)

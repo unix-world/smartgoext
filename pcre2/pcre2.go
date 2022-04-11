@@ -27,7 +27,7 @@
 // http://www.pcre.org/pcre2.txt
 
 // (c) 2022 unix-world.org
-// v.20220317.0255
+// v.20220411.2033
 
 package pcre2
 
@@ -460,7 +460,7 @@ var (
 // you can access by pcre_config() function
 func ConfigAll() (ret string) {
 	ret += fmt.Sprintf("jit: %d\n", CONFIG_JIT)
-	ret += fmt.Sprintf("jittarget: %s\n", CONFIG_JITTARGET)
+	ret += fmt.Sprintf("jittarget: %d\n", CONFIG_JITTARGET)
 	ret += fmt.Sprintf("link_size: %d\n", CONFIG_LINKSIZE)
 	ret += fmt.Sprintf("match_limit: %d\n", CONFIG_MATCHLIMIT)
 	ret += fmt.Sprintf("match_limit_recursion: %d\n", CONFIG_RECURSIONLIMIT)

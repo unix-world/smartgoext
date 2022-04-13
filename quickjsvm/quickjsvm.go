@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220411.0430 :: STABLE
+// r.20220413.2128 :: STABLE
 
 package quickjsvm
 
@@ -19,7 +19,7 @@ import (
 	smart "github.com/unix-world/smartgo"
 )
 
-const VERSION string = "r.20220411.0430"
+const VERSION string = "r.20220413.2128"
 
 
 type quickJsVmEvalResult struct {
@@ -86,7 +86,7 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 		var msecnds string = ""
 		for _, vv := range args {
 			msecnds = vv.String()
-			mseconds = smart.ParseIntegerStrAsUInt64(msecnds)
+			mseconds = smart.ParseStrAsUInt64(msecnds)
 		} //end for
 		if(mseconds > 1 && mseconds < 3600 * 1000) {
 			time.Sleep(time.Duration(mseconds) * time.Millisecond)

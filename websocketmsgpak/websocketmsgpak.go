@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220411.0430 :: STABLE
+// r.20220413.2128 :: STABLE
 
 package websocketmsgpak
 
@@ -34,7 +34,7 @@ import (
 
 
 const (
-	VERSION string = "r.20220411.0430"
+	VERSION string = "r.20220413.2128"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -382,7 +382,7 @@ func msgPakGenerateMessageHash(msg []byte) string {
 //-- server
 
 
-func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, authUsername string, authPassword string, allowedIPs string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
+func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
 
 	//-- checks
 
@@ -907,7 +907,7 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 			return
 		} //end if
 		var httpAddr string = smart.StrTrimWhitespaces(arrAddr[0])
-		var httpPort int64 = smart.ParseIntegerStrAsInt64(smart.StrTrimWhitespaces(arrAddr[1]))
+		var httpPort int64 = smart.ParseStrAsInt64(smart.StrTrimWhitespaces(arrAddr[1]))
 		if((!smart.IsNetValidIpAddr(httpAddr)) && (!smart.IsNetValidHostName(httpAddr))) {
 			log.Println("[ERROR] Invalid Server Address (Host):", addr)
 			return
@@ -935,6 +935,7 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 				log.Fatal("[ERROR] to read root certificate KEY: " + errKey)
 			} //end if
 			log.Println("Initializing Client:", socketPrefix + addr + socketSuffix, "@", "HTTPS/WsMux/TLS:WithServerCertificate")
+			log.Println("[NOTICE] Server Certificates Path:", certifPath)
 			securewebsocket = websocket.Dialer{TLSClientConfig: smarthttputils.TlsConfigClient(false, smart.StrTrimWhitespaces(string(crt)) + "\n" + smart.StrTrimWhitespaces(string(key)))}
 		} else if(tlsMode == "tls:noverify") {
 			socketPrefix = "wss://"

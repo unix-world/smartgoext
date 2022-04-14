@@ -1,11 +1,10 @@
 
 // GO Lang :: SmartGo Extra / WebDAV Server :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220410.0334 :: STABLE
+// r.20220415.0128 :: STABLE
 
+// Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package webdavsrv
-
-// REQUIRE: go 1.15 or later
 
 import (
 	"log"
@@ -23,10 +22,10 @@ import (
 )
 
 const (
-	THE_VERSION  string = "r.20220410.0334"
+	THE_VERSION  string = "r.20220415.0128"
 
 	CONN_HOST    string = "127.0.0.1"
-	CONN_PORT    uint16 = 13080
+	CONN_PORT    uint16 = 13087
 
 	STORAGE_DIR  string = "./wdav"
 	DAV_PATH     string = "/webdav"

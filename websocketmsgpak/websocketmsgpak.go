@@ -1,11 +1,10 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220414.1044 :: STABLE
+// r.20220415.0151 :: STABLE
 
+// Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
-
-// REQUIRE: go 1.15 or later
 
 import (
 	"os"
@@ -35,7 +34,7 @@ import (
 
 
 const (
-	VERSION string = "r.20220414.1044"
+	VERSION string = "r.20220415.0151"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -496,20 +495,29 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 
 	//--
 
-	setNewTask := func(theMsgCmd string, theMsgData string, theArea string) bool {
+	setNewTask := func(theMsgCmd string, theMsgData string, theArea string) (err string) {
+		//--
+		err = "" // initialize
 		//--
 		theMsgCmd = smart.StrTrimWhitespaces(theMsgCmd) // min 1 char ; max 255 chars ; must contain only a-z A-Z 0-9 - . :
 		theMsgData = smart.StrTrimWhitespaces(theMsgData)
 		//--
 		if((len(theMsgCmd) < 1) || (len(theMsgCmd) > 255) || (theMsgCmd == "") || (!smart.StrRegexMatchString(`^[a-zA-Z0-9\-\.\:]+$`, theMsgCmd))) {
-			log.Println("[WARNING] !!!!!!! Failed to Register new Task Command # Format is Invalid `" + theMsgCmd + "`")
-			return false
+			err = "Failed to Register new Task Command # Format is Invalid `" + theMsgCmd + "`"
+			log.Println("[WARNING] !!!!!!! " + err)
+			return
+		} //end if
+		if(smart.StrContains(theMsgCmd, ":")) { // indirect commands are dissalowed ... (must not contain `:`)
+			err = "Failed to Register new Task Command # Disallowed `" + theMsgCmd + "`"
+			log.Println("[WARNING] !!!!!!! " + err)
+			return
 		} //end if
 		//--
 		var lenMsgData int = len(theMsgData)
 		if(lenMsgData > int(MAX_MSG_SIZE)) {
-			log.Println("[WARNING] !!!!!!! Failed to Register new Task Command # Data is Oversized:", lenMsgData, "bytes")
-			return false
+			err = "Failed to Register new Task Command # Data is Oversized: " + smart.ConvertIntToStr(lenMsgData) + " bytes"
+			log.Println("[WARNING] !!!!!!! " + err)
+			return
 		} //end if
 		//--
 		theMsgCmd = "<" + smart.StrToUpper(theMsgCmd) + ">"
@@ -520,13 +528,14 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 					log.Println("[DEBUG] +++++++ Register Task Command for Client: `" + k + "` in Queue: `" + theMsgCmd + "`")
 				} //end if
 			} else {
-				log.Println("[WARNING] !!!!!!! Failed to Register new Task Command for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`")
-				return false
+				err = "Failed to Register new Task Command for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`"
+				log.Println("[WARNING] !!!!!!! " + err)
+				return
 			} //end if else
 		} //end for
 		//--
 		log.Println("[OK] New Task Command was Set by {" + theArea + "} for", len(connectedClients), "connected clients: `" + theMsgCmd + "` ; Data-Length:", lenMsgData, "bytes")
-		return true
+		return ""
 		//--
 	} //END FUNCTION
 
@@ -766,10 +775,13 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			isRequestOk = false
 		} //end if
 		//--
-		isRequestOk = setNewTask(custommsg[0], customdata[0], "HTTP(S) Task Command (" + r.RemoteAddr + ")")
+		var errSetTask string = setNewTask(custommsg[0], customdata[0], "HTTP(S) Task Command (" + r.RemoteAddr + ")")
+		if(errSetTask != "") {
+			isRequestOk = false
+		} //end if
 		//--
 		if(isRequestOk != true) {
-			smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `msg` : string, `data` : string ]", true)
+			smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `msg` : string, `data` : string ] # " + errSetTask, true)
 			return
 		} //end if
 		//--

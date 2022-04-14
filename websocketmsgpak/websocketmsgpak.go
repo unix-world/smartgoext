@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220413.2128 :: STABLE
+// r.20220414.1044 :: STABLE
 
 package websocketmsgpak
 
@@ -26,7 +26,8 @@ import (
 	smarthttputils 	"github.com/unix-world/smartgo/web-httputils"
 	smartcache 		"github.com/unix-world/smartgo/simplecache"
 
-	"github.com/unix-world/smartgoext/gorilla/websocket"
+	websocket 		"github.com/unix-world/smartgoext/gorilla/websocket"
+	crontab 		"github.com/unix-world/smartgoext/crontab"
 )
 
 
@@ -34,22 +35,31 @@ import (
 
 
 const (
-	VERSION string = "r.20220413.2128"
+	VERSION string = "r.20220414.1044"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
 
 	WAIT_CLOSE_LIMIT_SECONDS uint32 = 2 		// default is 2
 
-	MAX_MSG_SIZE uint32 = 16 * 1000 * 1000 		// 16 MB
-	MAX_QUEUE_MESSAGES uint8 = 100 				// must be between: 1..255
+	MAX_META_MSG_SIZE uint32 	= 1 * 1000 * 1000 	// 1 MB
+	MAX_MSG_SIZE uint32 		= 16 * 1000 * 1000 	// 16 MB
+	MAX_QUEUE_MESSAGES uint8 	= 100 				// must be between: 1..255
 
 	LIMIT_INTERVAL_SECONDS_MIN uint32 = 10 		// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
 	LIMIT_INTERVAL_SECONDS_MAX uint32 = 3600 	// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
 
 	CERTIFICATES_DEFAULT_PATH = "./ssl"
+
+	HTTP_AUTH_REALM = "MsgPak Server"
 )
 
+
+type CronMsgTask struct {
+	Timing string
+	Cmd string
+	Data string
+}
 
 type HandleMessagesFunc func(bool, string, string, string, string) string
 
@@ -134,7 +144,7 @@ func connReadFromSocket(conn *websocket.Conn, maxLimitSeconds uint32) (msgType i
 		maxLimitSeconds = LIMIT_INTERVAL_SECONDS_MAX
 	} //end if
 	//--
-	conn.SetReadLimit(int64(MAX_MSG_SIZE))
+	conn.SetReadLimit(int64(MAX_MSG_SIZE + MAX_META_MSG_SIZE))
 	conn.SetReadDeadline(time.Now().Add(time.Duration(int(maxLimitSeconds + 1)) * time.Second))
 	//--
 	messageType, message, rdErr := conn.ReadMessage()
@@ -161,7 +171,15 @@ func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string) (msg
 		smart.Sha512(cmd + "\n" + dataEnc + "\n" + data),
 	}
 	//--
-	return smart.DataArchive(smart.JsonEncode(sMsg)), ""
+	dataEnc = smart.DataArchive(smart.JsonEncode(sMsg))
+	sMsg = nil
+	//--
+	var crrLen int = len(dataEnc)
+	if(crrLen > int(MAX_MSG_SIZE)) {
+		return "", "MsgPak: Package is Oversized: Max allowed is: " + smart.ConvertIntToStr(int(MAX_MSG_SIZE)) + " < Current Package is: " + smart.ConvertIntToStr(crrLen) + " bytes"
+	} //end if
+	//--
+	return dataEnc, ""
 	//--
 } //END FUNCTION
 
@@ -382,7 +400,7 @@ func msgPakGenerateMessageHash(msg []byte) string {
 //-- server
 
 
-func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc) bool {
+func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc, cronMsgTasks []CronMsgTask) bool {
 
 	//-- checks
 
@@ -474,6 +492,63 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 	const defaultMessageCmd = "<PING>"
 	var defaultMessageDat = "PING, from the Server: [" + serverID + "]"
 
+	var connectedClients map[string]*websocket.Conn = map[string]*websocket.Conn{}
+
+	//--
+
+	setNewTask := func(theMsgCmd string, theMsgData string, theArea string) bool {
+		//--
+		theMsgCmd = smart.StrTrimWhitespaces(theMsgCmd) // min 1 char ; max 255 chars ; must contain only a-z A-Z 0-9 - . :
+		theMsgData = smart.StrTrimWhitespaces(theMsgData)
+		//--
+		if((len(theMsgCmd) < 1) || (len(theMsgCmd) > 255) || (theMsgCmd == "") || (!smart.StrRegexMatchString(`^[a-zA-Z0-9\-\.\:]+$`, theMsgCmd))) {
+			log.Println("[WARNING] !!!!!!! Failed to Register new Task Command # Format is Invalid `" + theMsgCmd + "`")
+			return false
+		} //end if
+		//--
+		var lenMsgData int = len(theMsgData)
+		if(lenMsgData > int(MAX_MSG_SIZE)) {
+			log.Println("[WARNING] !!!!!!! Failed to Register new Task Command # Data is Oversized:", lenMsgData, "bytes")
+			return false
+		} //end if
+		//--
+		theMsgCmd = "<" + smart.StrToUpper(theMsgCmd) + ">"
+		for k, _ := range connectedClients {
+			if(len(memCustomMsgs[k]) < int(MAX_QUEUE_MESSAGES)) { // hardcoded
+				memCustomMsgs[k] = append(memCustomMsgs[k], smart.Base64Encode(theMsgCmd) + "|" + smart.Base64Encode(theMsgData) + "|" + smart.Base64Encode(smart.DateNowIsoUtc()))
+				if(DEBUG == true) {
+					log.Println("[DEBUG] +++++++ Register Task Command for Client: `" + k + "` in Queue: `" + theMsgCmd + "`")
+				} //end if
+			} else {
+				log.Println("[WARNING] !!!!!!! Failed to Register new Task Command for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`")
+				return false
+			} //end if else
+		} //end for
+		//--
+		log.Println("[OK] New Task Command was Set by {" + theArea + "} for", len(connectedClients), "connected clients: `" + theMsgCmd + "` ; Data-Length:", lenMsgData, "bytes")
+		return true
+		//--
+	} //END FUNCTION
+
+	//--
+
+	if((cronMsgTasks != nil) && (len(cronMsgTasks) > 0)) {
+		ctab := crontab.New()
+		for t:=0; t<len(cronMsgTasks); t++ {
+			log.Println("[INFO] Registering Self-Cron Job Tasks: `" + cronMsgTasks[t].Timing + "` # <" + cronMsgTasks[t].Cmd + "> @ [", len(cronMsgTasks[t].Data), "bytes ]")
+			cronJoberr := ctab.AddJob(cronMsgTasks[t].Timing, func(idx int){
+				log.Println("[NOTICE] ······· ······· A New Task will be set via Self-Cron Job #" + smart.ConvertIntToStr(idx) + " (" + cronMsgTasks[idx].Timing + ") ······· <" + cronMsgTasks[idx].Cmd + ">")
+				setNewTask(cronMsgTasks[idx].Cmd, cronMsgTasks[idx].Data, "Self-Cron Job #" + smart.ConvertIntToStr(idx))
+			}, t)
+			if(cronJoberr != nil) {
+				log.Println("[ERROR] Failed to Register a Task as Self-Cron Job #" + smart.ConvertIntToStr(t) + " :", cronJoberr)
+				return false
+			} //end if
+		} //end for
+	} //end if
+
+	//--
+
 	srvBroadcastMsg := func(conn *websocket.Conn, rAddr string) {
 		//--
 		defer smart.PanicHandler()
@@ -488,7 +563,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			theCacheMsgHash = "" // init
 			sendCustomMsgToThisClient = false // init
 			//--
-			log.Println("[DEBUG] ~~~~~~~ Client Task Message Queue Length:", len(memCustomMsgs), "~~~~~~~")
+			log.Println("[DEBUG] ≡≡≡≡≡≡≡ Client Task Commands Queue Length:", len(memCustomMsgs), "≡≡≡≡≡≡≡")
 			if(DEBUG == true) {
 				log.Println("[DATA] Message Queue:", memCustomMsgs)
 			} //end if
@@ -504,7 +579,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 					memCustomMsgs[rAddr] = []string{} // there was only one element, reset !
 				} //end if else
 				if(DEBUG == true) {
-					log.Println("[DEBUG] srvBroadcastMsg: Found a Queued Task Message for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
+					log.Println("[DEBUG] srvBroadcastMsg: Found a Queued Task Command for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
 				} //end if
 				if(len(oneCustomMsg) == 3) {
 					sendCustomMsgToThisClient = true
@@ -523,11 +598,11 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			if(sendCustomMsgToThisClient == true) {
 				//--
 				if(DEBUG == true) {
-					log.Println("[DEBUG] srvBroadcastMsg: Check in Cache for the specific Task Message for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
+					log.Println("[DEBUG] srvBroadcastMsg: Check in Cache for the specific Task Command for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
 				} //end if
 				cacheExists, cachedObj, _ := memSrvMsgCache.Get(rAddr + "|" + theCacheMsgHash) // {{{SYNC-MSGPAK-CACHE-KEY}}}
 				if(DEBUG_CACHE == true) {
-					log.Println("[DATA] srvBroadcastMsg: Cached Info for the specific Task Message for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "` ; In-Cache:", cacheExists, "; Object:", cachedObj)
+					log.Println("[DATA] srvBroadcastMsg: Cached Info for the specific Task Command for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "` ; In-Cache:", cacheExists, "; Object:", cachedObj)
 				} //end if
 				//--
 				if(cacheExists != true) { // send
@@ -535,19 +610,19 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 					cachedObj.Data = smart.DateNowIsoUtc()
 					memSrvMsgCache.Set(cachedObj, uint64(intervalMsgSeconds * 10)) // support up to 7 ( + 3 free loops) queued messages {{{SYNC-MAX-QUEUED-MSGPAK}}}
 					if(DEBUG == true) {
-						log.Println("[DEBUG] srvBroadcastMsg: Task Message Cached now (send) for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
+						log.Println("[DEBUG] srvBroadcastMsg: Task Command Cached now (send) for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
 					} //end if
 				} else { // skip
 					sendCustomMsgToThisClient = false
 					if(DEBUG == true) {
-						log.Println("[DEBUG] srvBroadcastMsg: Task Message already Cached (skip) for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
+						log.Println("[DEBUG] srvBroadcastMsg: Task Command already Cached (skip) for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
 					} //end if
 				} //end if
 				//--
 			} else {
 				//--
 				if(theCacheMsgHash != "") {
-					log.Println("[ERROR] srvBroadcastMsg: Invalid Task Message for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
+					log.Println("[ERROR] srvBroadcastMsg: Invalid Task Command for Client `" + rAddr + "` ; Hash: `" + theCacheMsgHash + "`")
 				} //end if
 				//--
 			} //end if
@@ -599,13 +674,13 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 	} //end function
 
-	var connectedClients map[string]*websocket.Conn = map[string]*websocket.Conn{}
+	//--
 
 	srvHandlerMsgPack := func(w http.ResponseWriter, r *http.Request) {
 		//-- check auth
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, "MessagePak Server: MsgPak Area", authUsername, authPassword, allowedIPs, false) // outputs: TEXT
+		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, false) // outputs: TEXT
 		if(authErr != "") {
-			log.Println("[WARNING] MessagePak Server / MsgPak Area :: Authentication Failed:", authErr)
+			log.Println("[WARNING] MessagePak Server / MsgPak Channel Area :: Authentication Failed:", authErr)
 			return
 		} //end if
 		//-- upgrade the raw HTTP connection to a websocket based one ; below method must check credentials
@@ -674,44 +749,33 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 
 	srvHandlerCustomMsg := func(w http.ResponseWriter, r *http.Request) {
 		//--
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, "MessagePak Server Task Messages Area", authUsername, authPassword, allowedIPs, true) // outputs: HTML
+		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, true) // outputs: HTML
 		if(authErr != "") {
-			log.Println("[WARNING] MessagePak Server / Task Message Area :: Authentication Failed:", authErr)
+			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication Failed:", authErr)
 			return
 		} //end if
 		//--
 		var isRequestOk bool = true
 		//--
-		custommsg, okmsg := r.URL.Query()["msg"] // min 1 char ; max 255 chars ; must contain only a-z A-Z 0-9 - . :
-		if(!okmsg || (len(custommsg[0]) < 1) || (len(custommsg[0]) > 255) || (smart.StrTrimWhitespaces(custommsg[0]) == "") || (!smart.StrRegexMatchString(`^[a-zA-Z0-9\-\.\:]+$`, custommsg[0]))) {
+		custommsg, okmsg := r.URL.Query()["msg"]
+		if(!okmsg || (smart.StrTrimWhitespaces(custommsg[0]) == "")) {
 			isRequestOk = false
 		} //end if
-		customdata, okdata := r.URL.Query()["data"] // max 16MB
-		if(!okdata || (len(customdata[0]) > 16777216)) { // {{{SYNC-SIZE-16Mb}}}
+		customdata, okdata := r.URL.Query()["data"]
+		if(!okdata) {
 			isRequestOk = false
 		} //end if
+		//--
+		isRequestOk = setNewTask(custommsg[0], customdata[0], "HTTP(S) Task Command (" + r.RemoteAddr + ")")
 		//--
 		if(isRequestOk != true) {
 			smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `msg` : string, `data` : string ]", true)
 			return
 		} //end if
 		//--
-		var theMsgCmd   string = "<" + smart.StrToUpper(smart.StrTrimWhitespaces(custommsg[0])) + ">"
-		var theMsgData string = string(customdata[0])
-		for k, _ := range connectedClients {
-			if(len(memCustomMsgs[k]) < int(MAX_QUEUE_MESSAGES)) { // hardcoded
-				memCustomMsgs[k] = append(memCustomMsgs[k], smart.Base64Encode(theMsgCmd) + "|" + smart.Base64Encode(theMsgData) + "|" + smart.Base64Encode(smart.DateNowIsoUtc()))
-				if(DEBUG == true) {
-					log.Println("[DEBUG] +++++++ Register Task Message for Client: `" + k + "` in Queue: `" + theMsgCmd + "`")
-				} //end if
-			} else {
-				log.Println("[WARNING] !!!!!!! Failed to Register new Task Message for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`")
-			} //end if else
-		} //end for
+		log.Println("[NOTICE] °°°°°°° °°°°°°° A New Task was set via HTTP(S) Task Command °°°°°°° by `" + authUsername + "` from IP Address [`" + r.RemoteAddr + "`] # <" + custommsg[0] + ">")
 		//--
-		log.Println("[OK] New Task Message was Set for", len(connectedClients), "connected clients via HTTP(S) Task Handler by `" + authUsername + "` from IP Address [`" + r.RemoteAddr + "`]: `" + theMsgCmd + "` ; Data-Length:", len(theMsgData), "bytes")
-		//--
-		smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Task Message", "", `<h1>Task Message &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success">` + smart.EscapeHtml(theMsgCmd) + `</div>` + "\n" + `<div class="operation_important">` + smart.EscapeHtml(theMsgData) + `</div>`), "index.html", "", -1, "", "no-cache", nil)
+		smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Task Command", "", `<h1>Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success">` + smart.EscapeHtml(custommsg[0]) + `</div>` + "\n" + `<div class="operation_important">` + smart.EscapeHtml(customdata[0]) + `</div>`), "index.html", "", -1, "", "no-cache", nil)
 		//--
 	} //end function
 
@@ -741,6 +805,8 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 	mux.HandleFunc("/lib/", webAssetsHttpHandler)
 	mux.HandleFunc("/", srvHandlerHome)
 
+	//--
+
 	if(useTLS == true) {
 		log.Println("Starting WS Server:", "wss://" + srvAddr + "/msgpak", "@", "HTTPS/WsMux/TLS", "#", VERSION)
 		log.Println("[NOTICE] Certificates Path:", certifPath)
@@ -751,6 +817,8 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 	//	go log.Fatal("[ERROR]", http.ListenAndServe(srvAddr, nil))
 		go log.Fatal("[ERROR]", srv.ListenAndServe())
 	} //end if else
+
+	//--
 
 	return true
 

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220413.2128 :: STABLE
+// r.20220414.1044 :: STABLE
 
 package smartgoext
 
@@ -9,7 +9,7 @@ package smartgoext
 
 //-----
 
-const VERSION string = "v.20220413.2128"
+const VERSION string = "v.20220414.1044"
 
 //-----
 

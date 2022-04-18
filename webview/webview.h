@@ -1,7 +1,9 @@
 /*
  * MIT License
- *
  * Copyright (c) 2017 Serge Zaitsev
+ *
+ * Copyright (c) 2018-2022 unix-world.org
+ * v.20220416.0004
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -326,7 +328,16 @@ WEBVIEW_API int webview_init(struct webview *w) {
 
   w->priv.webview = webkit_web_view_new_with_user_content_manager(m);
   //-- unixman
-  webkit_web_context_set_tls_errors_policy(webkit_web_view_get_context(WEBKIT_WEB_VIEW(w->priv.webview)), WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+    WebKitWebContext *wctx = webkit_web_view_get_context(WEBKIT_WEB_VIEW(w->priv.webview));
+//  g_object_set(G_OBJECT(wDataManager), "is-ephemeral", true, NULL);
+    webkit_web_context_set_spell_checking_enabled(wctx, false);
+    webkit_web_context_set_cache_model(wctx, WEBKIT_CACHE_MODEL_DOCUMENT_BROWSER); // use a lighter cache model WEBKIT_CACHE_MODEL_DOCUMENT_BROWSER ; using WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER will completely disable the cache
+#if WEBKIT_MAJOR_VERSION >= 2 && WEBKIT_MINOR_VERSION >= 32
+    WebKitWebsiteDataManager *wDataManager = webkit_web_context_get_website_data_manager(wctx);
+    webkit_website_data_manager_set_tls_errors_policy(wDataManager, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+#else
+  webkit_web_context_set_tls_errors_policy(wctx, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+#endif
   //-- #unixman
   webkit_web_view_load_uri(WEBKIT_WEB_VIEW(w->priv.webview),
                            webview_check_url(w->url));
@@ -336,9 +347,10 @@ WEBVIEW_API int webview_init(struct webview *w) {
 
   //-- unixman
   WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(w->priv.webview));
+  //--
   webkit_settings_set_default_charset(settings, "UTF-8");
   webkit_settings_set_user_agent(settings, webkit_settings_get_user_agent(settings));
-  webkit_settings_set_enable_plugins(settings, false);
+  //webkit_settings_set_enable_plugins(settings, false); // deprecated
   webkit_settings_set_enable_java(settings, false);
   webkit_settings_set_javascript_can_access_clipboard(settings, false);
   webkit_settings_set_javascript_can_open_windows_automatically(settings, false);
@@ -346,21 +358,20 @@ WEBVIEW_API int webview_init(struct webview *w) {
   //webkit_settings_set_enable_private_browsing(settings, false); // deprecated
   webkit_settings_set_enable_page_cache(settings, false);
   webkit_settings_set_enable_smooth_scrolling(settings, false);
-  webkit_settings_set_enable_webgl(settings, false);
-  webkit_settings_set_enable_accelerated_2d_canvas(settings, false);
+  //g_object_set(G_OBJECT(settings), "enable-webgl", true, NULL);
+  //webkit_settings_set_enable_webgl(settings, false); // anyway, should alow webgl if available ...
+  //webkit_settings_set_enable_accelerated_2d_canvas(settings, false); // deprecated
   webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER); // WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND
+  webkit_settings_set_enable_xss_auditor(settings, true);
+  webkit_settings_set_enable_tabs_to_links(settings, false);
+  webkit_settings_set_allow_modal_dialogs(settings, true);
   //-- #unixman
 
-  if (w->debug) {
-    //-- unixman
-    //WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(w->priv.webview));
-    //-- #unixman
+  if(w->debug) {
     webkit_settings_set_enable_write_console_messages_to_stdout(settings, true);
     webkit_settings_set_enable_developer_extras(settings, true);
-  } else {
-    g_signal_connect(G_OBJECT(w->priv.webview), "context-menu",
-                     G_CALLBACK(webview_context_menu_cb), w);
   }
+  g_signal_connect(G_OBJECT(w->priv.webview), "context-menu", G_CALLBACK(webview_context_menu_cb), w); // disables the context menu
 
   gtk_widget_show_all(w->priv.window);
 
@@ -2297,3 +2308,5 @@ WEBVIEW_API void webview_print_log(const char *s) { printf("%s\n", s); }
 #endif
 
 #endif /* WEBVIEW_H */
+
+// END

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220415.0151 :: STABLE
+// r.20220416.1012 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -25,6 +25,7 @@ import (
 	smarthttputils 	"github.com/unix-world/smartgo/web-httputils"
 	smartcache 		"github.com/unix-world/smartgo/simplecache"
 
+	dhkx 			"github.com/unix-world/smartgo/dhkx"
 	websocket 		"github.com/unix-world/smartgoext/gorilla/websocket"
 	crontab 		"github.com/unix-world/smartgoext/crontab"
 )
@@ -34,12 +35,13 @@ import (
 
 
 const (
-	VERSION string = "r.20220415.0151"
+	VERSION string = "r.20220416.1012"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
 
-	WAIT_CLOSE_LIMIT_SECONDS uint32 = 2 		// default is 2
+	WAIT_DHKX_LIMIT_SECONDS  uint32 = 60 		// default is 60
+	WAIT_CLOSE_LIMIT_SECONDS uint32 =  2 		// default is 2
 
 	MAX_META_MSG_SIZE uint32 	= 1 * 1000 * 1000 	// 1 MB
 	MAX_MSG_SIZE uint32 		= 16 * 1000 * 1000 	// 16 MB
@@ -60,7 +62,7 @@ type CronMsgTask struct {
 	Data string
 }
 
-type HandleMessagesFunc func(bool, string, string, string, string) string
+type HandleMessagesFunc func(bool, string, string, string, string) (string, string)
 
 
 type messagePack struct {
@@ -73,9 +75,7 @@ type messagePack struct {
 //-----
 
 
-//var mtx sync.Mutex
-var mtx sync.RWMutex
-
+var websockWriteMutex sync.Mutex // connections allow concurrent reads but not concurrent writes, thus protect writes with a simple mutex (not with a RWMutex)
 
 func connCloseSocket(conn *websocket.Conn) {
 	//--
@@ -93,8 +93,8 @@ func connWriteCloseMsgToSocket(conn *websocket.Conn, msg []byte) error {
 	//--
 	defer smart.PanicHandler()
 	//--
-	mtx.Lock()
-	defer mtx.Unlock()
+	websockWriteMutex.Lock()
+	defer websockWriteMutex.Unlock()
 	//--
 	if(conn == nil) {
 		return smart.CreateNewError("WARNING: Cannot write CloseMsg to Empty Connection")
@@ -110,8 +110,8 @@ func connWriteTxtMsgToSocket(conn *websocket.Conn, msg []byte, maxLimitSeconds u
 	//--
 	defer smart.PanicHandler()
 	//--
-	mtx.Lock()
-	defer mtx.Unlock()
+	websockWriteMutex.Lock()
+	defer websockWriteMutex.Unlock()
 	//--
 	if(conn == nil) {
 		return smart.CreateNewError("WARNING: Cannot write TxtMsg to Empty Connection")
@@ -156,14 +156,16 @@ func connReadFromSocket(conn *websocket.Conn, maxLimitSeconds uint32) (msgType i
 //-----
 
 
-func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string) (msg string, errMsg string) {
+func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string, sharedSecret string) (msg string, errMsg string) {
+	//--
+	defer smart.PanicHandler()
 	//--
 	cmd = smart.StrTrimWhitespaces(cmd)
 	if(cmd == "") {
 		return "", "MsgPak: Command is empty"
 	} //end if
 	//--
-	var dataEnc string = smart.ThreefishEncryptCBC(data, sharedPrivateKey + ":" + smart.Sha384(cmd), false)
+	var dataEnc string = smart.ThreefishEncryptCBC(data, sharedPrivateKey + sharedSecret + ":" + smart.Sha384(cmd), false)
 	sMsg := &messagePack{
 		cmd,
 		dataEnc,
@@ -183,7 +185,9 @@ func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string) (msg
 } //END FUNCTION
 
 
-func msgPakParseMessage(msg string, sharedPrivateKey string) (msgStruct *messagePack, errMsg string) {
+func msgPakParseMessage(msg string, sharedPrivateKey string, sharedSecret string) (msgStruct *messagePack, errMsg string) {
+	//--
+	defer smart.PanicHandler()
 	//--
 	msg = smart.StrTrimWhitespaces(msg)
 	if(msg == "") {
@@ -210,7 +214,7 @@ func msgPakParseMessage(msg string, sharedPrivateKey string) (msgStruct *message
 		D["data"].(string),
 		D["checksum"].(string),
 	}
-	sMsg.Data = smart.ThreefishDecryptCBC(sMsg.Data, sharedPrivateKey + ":" + smart.Sha384(sMsg.Cmd), false)
+	sMsg.Data = smart.ThreefishDecryptCBC(sMsg.Data, sharedPrivateKey + sharedSecret + ":" + smart.Sha384(sMsg.Cmd), false)
 	if(sMsg.CheckSum != smart.Sha512(sMsg.Cmd + "\n" + D["data"].(string) + "\n" + sMsg.Data)) {
 		return nil, "MsgPak: Invalid Message Checksum"
 	} //end if
@@ -220,14 +224,16 @@ func msgPakParseMessage(msg string, sharedPrivateKey string) (msgStruct *message
 } //END FUNCTION
 
 
-func msgPakWriteMessage(conn *websocket.Conn, maxLimitSeconds uint32, cmd string, data string, sharedPrivateKey string) (ok bool, msgSize int, errMsg string) {
+func msgPakWriteMessage(conn *websocket.Conn, maxLimitSeconds uint32, cmd string, data string, sharedPrivateKey string, sharedSecret string) (ok bool, msgSize int, errMsg string) {
+	//--
+	defer smart.PanicHandler()
 	//--
 	cmd = smart.StrTrimWhitespaces(cmd)
 	if(cmd == "") {
 		return false, 0, ""
 	} //end if
 	//--
-	msg, errMsg := msgPakComposeMessage(cmd, data, sharedPrivateKey)
+	msg, errMsg := msgPakComposeMessage(cmd, data, sharedPrivateKey, sharedSecret)
 	if(errMsg != "") {
 		return false, 0, "MsgPak: Write Message Compose Error: " + errMsg
 	} //end if
@@ -245,15 +251,83 @@ func msgPakWriteMessage(conn *websocket.Conn, maxLimitSeconds uint32, cmd string
 } //END FUNCTION
 
 
-func msgPakHandleMessage(conn *websocket.Conn, isServer bool, id string, remoteId string, msgHash string, maxLimitSeconds uint32, message string, sharedPrivateKey string, handleMessagesFunc HandleMessagesFunc) (okRecv bool, okRepl bool, errMsg string) {
+func dhkxCliHandler(remoteId string, isServer bool, cmd string, data string) (answerMsg string, answerData string, extraData string) {
+	//--
+	if(isServer == true) {
+		return "<ERR:DHKX:CLI>", "Invalid Server Command: " + cmd, ""
+	} //end if
+	if(cmd != "<DHKX:CLI>") {
+		return "<ERR:DHKX:CLI>", "Invalid Command: " + cmd, ""
+	} //end if
+	//--
+	var clientRecvDhKxFromServer dhkx.HandleDhkxCliRecvFunc = func() (string, []byte, int) {
+		//--
+		arr := smart.Explode(":", smart.StrTrimWhitespaces(data))
+		if(len(arr) != 2) {
+			return "Invalid Message Format", nil, 0
+		} //end if
+		//--
+		var grpId int = int(smart.ParseStrAsInt64(arr[0]))
+		if(!dhkx.DhKxValidateGroup(grpId)) {
+			return "Invalid Message Format: Group: " + arr[0], nil, 0
+		} //end if
+		var srvPubKey []byte = smart.BaseDecode(arr[1], "b62")
+		//--
+		return "", srvPubKey, grpId
+		//--
+	} //END FUNCTION
+	//--
+	var clientSendDhKxToServer dhkx.HandleDhkxCliSendFunc = func(cliPubKey []byte, cliExch []byte) string {
+		//--
+		// This will be handled back by dhkxCliHandler -> msgPakHandleMessage
+		//--
+		return ""
+		//--
+	} //END FUNCTION
+	//--
+	errCliRecvSend1, grpCli, privCli, pubCli, recvPubSrv, shardCli, shardExch := dhkx.DhKxClientExchange(clientRecvDhKxFromServer, clientSendDhKxToServer)
+	if(errCliRecvSend1 != "") {
+		return "<ERR:DHKX:CLI>", errCliRecvSend1, ""
+	} //end if
+	if(grpCli == nil) {
+		return "<ERR:DHKX:CLI>", "Client Group is NULL", ""
+	} //end if
+	if(privCli == nil) {
+		return "<ERR:DHKX:CLI>", "Client PrivKey is NULL", ""
+	} //end if
+	if(pubCli == nil) {
+		return "<ERR:DHKX:CLI>", "Client PubKey is NULL", ""
+	} //end if
+	if(recvPubSrv == nil) {
+		return "<ERR:DHKX:CLI>", "Received Server PubKey is NULL", ""
+	} //end if
+	if(shardCli == "") {
+		return "<ERR:DHKX:CLI>", "Client SharedKey is Empty", ""
+	} //end if
+	if(shardExch == "") {
+		return "<ERR:DHKX:CLI>", "Client SharedExchange is Empty", ""
+	} //end if
+	//--
+	if(DEBUG == true) {
+		log.Println("[DEBUG] DhKx SharedSecret:", shardCli)
+	} //end if
+	//--
+	return "<DHKX:SRV>", smart.BlowfishEncryptCBC(smart.BaseEncode(pubCli, "b58") + ":" + smart.BaseEncode([]byte(shardExch), "b62"), smart.BaseEncode(recvPubSrv, "b92")), shardCli
+	//--
+} //END FUNCTION
+
+
+func msgPakHandleMessage(conn *websocket.Conn, isServer bool, id string, remoteId string, msgHash string, maxLimitSeconds uint32, message string, sharedPrivateKey string, sharedSecret string, handleMessagesFunc HandleMessagesFunc) (okRecv bool, okRepl bool, errMsg string, extData string) {
+	//--
+	defer smart.PanicHandler()
 	//--
 	var isRecvOk bool = false
 	//--
-	msg, errMsg := msgPakParseMessage(message, sharedPrivateKey)
+	msg, errMsg := msgPakParseMessage(message, sharedPrivateKey, sharedSecret)
 	lenMessage := len(smart.StrTrimWhitespaces(message))
 	message = ""
 	if(errMsg != "") {
-		return isRecvOk, false, errMsg
+		return isRecvOk, false, errMsg, ""
 	} //end if
 	isRecvOk = true
 	//--
@@ -276,79 +350,95 @@ func msgPakHandleMessage(conn *websocket.Conn, isServer bool, id string, remoteI
 	} //end if else
 	//--
 	var answerMsg string = ""
-	var answerData string = "Reply for Command `" + msg.Cmd + "` from `" + area + "` {" + id + "}:" + "\n" + msg.Cmd + "\n" + "Data-Length-Bytes: " + smart.ConvertIntToStr(len(msg.Data)) + "\n" + "Package-Length-Bytes: " + smart.ConvertIntToStr(lenMessage) + "\n"
+	var answerData string = ""
+	var extraData string = ""
 	//--
-	/*
-	handleMessagesFunc := func(isServer bool, id string, remoteId string, cmd string, data string) string {
-		//--
-		var answerMsg string = ""
-		//--
-		switch(cmd) { // see below how to implement commands ...
-			default: // unhandled
-				answerMsg = "<ERR:UNHANDLED> Error description goes here" // return an error answer
-		} //end switch
-		//--
-		return answerMsg
-		//--
-	} //END FUNCTION
-	*/
-	//--
+	var shouldAnswer bool = true
 	switch(msg.Cmd) {
+		case "<DHKX:CLI>": // client DHKX Key Exchange
+			if(isServer != true) {
+				answerMsg, answerData, extraData = dhkxCliHandler(remoteId, isServer, msg.Cmd, msg.Data)
+			} //end if
+			break
 		case "<PING>": // ping (zero)
 			if(isServer != true) {
 				answerMsg = "<OK:PING>"
-			} //end if else
+				answerData = msg.Cmd
+			} //end if
 			break
 		case "<PONG>": // pong (one)
 			if(isServer == true) {
 				answerMsg = "<OK:PONG>"
-			} //end if else
+				answerData = msg.Cmd
+			} //end if
 			break
-		case "<OK:PING>", "<OK:PONG>", "<OK>":
+		case "<OK:PING>", "<OK:PONG>":
 			if(DEBUG == true) {
 				log.Println("[DEBUG] " + identRepl + " # Command `" + msg.Cmd + "` Confirmation for: " + remoteId)
 			} //end if
-			answerMsg = "" // no message to return
+			shouldAnswer = false
+			break
+		case "<OK>":
+			log.Println("[OK] " + identRepl + " # Command `" + msg.Cmd + "` @ `" + msg.Data + "`")
+			shouldAnswer = false
 			break
 		case "<INFO>":
-			if(smart.StrStartsWith(msg.Data, "<ERR:")) {
-				log.Println("[WARNING] " + identRepl + " # Command Error `" + msg.Cmd + "` @ `" + msg.Data + "`")
-			} else {
-				log.Println("[WARNING] " + identRepl + " # Command Error `" + msg.Cmd + "` @ `" + msg.Data + "`")
-			} //end if
-			answerMsg = ""
+			log.Println("[INFO] " + identRepl + " # Command `" + msg.Cmd + "` @ `" + msg.Data + "`")
+			shouldAnswer = false
 			break
 		case "<ERR>":
-			answerMsg = "Invalid Message ! <ERR> is reserved for internal use ..."
-			log.Println("[WARNING] " + identRepl + ": " + answerMsg)
+			log.Println("[WARNING] " + identRepl + ": " + "Invalid Message ! <ERR> is reserved for internal use ...")
+			shouldAnswer = false
 			break
 		default: // custom handler or unhandled
-			if(smart.StrStartsWith(msg.Cmd, "<ERR:")) {
-				answerMsg = msg.Cmd
-				if(smart.StrStartsWith(answerMsg, "<ERR:")) {
-					log.Println("[WARNING] " + identRepl + ": " + answerMsg)
-					answerData = msg.Cmd + " " + answerMsg
-					answerMsg = "<INFO>"
-				} //end if
+			if(smart.StrStartsWith(msg.Cmd, "<ERR:")) { // for commands starting with <ERR: just forward them to <INFO>
+				log.Println("[WARNING] " + identRepl + ": " + msg.Cmd + " # " + msg.Data)
+				shouldAnswer = false
 			} else {
-				answerMsg = handleMessagesFunc(isServer, id, remoteId, msg.Cmd, msg.Data)
+				/*
+				handleMessagesFunc := func(isServer bool, id string, remoteId string, cmd string, data string) (bool, string, string) {
+					//--
+					defer smart.PanicHandler()
+					//--
+					var answerMsg string = ""
+					var answerData string = ""
+					//--
+					switch(cmd) { // see below how to implement commands ...
+						default: // unhandled
+							answerMsg = "<ERR:UNHANDLED>" // return an error answer
+							answerData = "Error description goes here"
+					} //end switch
+					//--
+					// if both answerMsg and answerData are empty will return no answer
+					// if answerMsg is empty and answerData is non-empty the answerData will be considered as an error message to display
+					// if answerMsg is non-empty will reply back with answerMsg and answerData
+					//--
+					return answerMsg, answerData
+					//--
+				} //END FUNCTION
+				*/
+				answerMsg, answerData = handleMessagesFunc(isServer, id, remoteId, msg.Cmd, msg.Data)
 				if(smart.StrStartsWith(answerMsg, "<ERR:")) {
-					log.Println("[WARNING] " + identRepl + ": " + answerMsg)
-					answerData = msg.Cmd + " " + answerMsg
-					answerMsg = "<INFO>"
+					log.Println("[WARNING] " + identRepl + ": " + msg.Cmd + " # FAILED: " + answerMsg + " # " + answerData)
+				} else if((answerMsg == "") && (answerData != "")) {
+					log.Println("[ERROR] " + identRepl + ": " + msg.Cmd + " # FAILED: # " + answerData)
+				} else if((answerMsg == "") && (answerData == "")) {
+					shouldAnswer = false
 				} //end if
 			} //end if else
 	} //end switch
-	if(smart.StrStartsWith(answerMsg, "<ERR:")) { // answers with ERRORS starts with "<ERR:" ; see the sample above ...
-		return isRecvOk, false, identRepl + " # Failed to Handle `" + msg.Cmd + "` message: " + answerMsg
-	} else if(answerMsg == "") { // there is no other message to be sent
-		return isRecvOk, false, ""
+	//--
+	if(shouldAnswer != true) {
+		if((answerMsg != "") || (answerData != "")) {
+			log.Println("[WARNING] " + identRepl + ": " + msg.Cmd + " # Command is Marked as Should-Not-Answer but have a non-empty Message/Data: `" + answerMsg + "` / `" + answerData + "`")
+		} //end if
+		return isRecvOk, false, "", "" // there is no other message to be sent
 	} //end if
 	//--
 	if(conn == nil) { // do not return any message in this case ...
-		return isRecvOk, false, identRepl + " # Cannot Send Back Reply to `" + msg.Cmd + "` @ No connection available ..."
+		return isRecvOk, false, identRepl + " # Cannot Send Back Reply to `" + msg.Cmd + "` @ No connection available ...", ""
 	} //end if
-	wrOK, lenPakMsg, errWrMsg := msgPakWriteMessage(conn, maxLimitSeconds, answerMsg, answerData, sharedPrivateKey)
+	wrOK, lenPakMsg, errWrMsg := msgPakWriteMessage(conn, maxLimitSeconds, answerMsg, answerData, sharedPrivateKey, sharedSecret)
 	if((wrOK != true) || (errWrMsg != "")) {
 		if(errWrMsg == "") {
 			errWrMsg = "Unknown Error"
@@ -356,12 +446,12 @@ func msgPakHandleMessage(conn *websocket.Conn, isServer bool, id string, remoteI
 		if(DEBUG == true) {
 			log.Println("[DEBUG] " + identRepl + " # Message Reply FAILED to [" + rarea + "] @ " + errWrMsg)
 		} //end if
-		return isRecvOk, true, errWrMsg
+		return isRecvOk, true, errWrMsg, ""
 	} //end if
 	//--
 	log.Println("[NOTICE] " + identRepl + " Message Reply to [" + rarea + "] # `" + answerMsg + "` ; Data-Size:", len(answerData), " / Package-Size:", lenPakMsg, "bytes")
 	//--
-	return isRecvOk, true, ""
+	return isRecvOk, true, "", extraData
 	//--
 } //END FUNCTION
 
@@ -400,6 +490,10 @@ func msgPakGenerateMessageHash(msg []byte) string {
 
 
 func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc, cronMsgTasks []CronMsgTask) bool {
+
+	//--
+
+	defer smart.PanicHandler()
 
 	//-- checks
 
@@ -477,25 +571,22 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		EnableCompression: false, // this is still experimental
 	} // use default options
 
+	var dhkxSrvKeysClients sync.Map
+	var connectedClients sync.Map
+
 	var memSrvMsgCache *smartcache.InMemCache = smartcache.NewCache("smart.websocketmsgpak.server.messages.inMemCache", time.Duration(int(intervalMsgSeconds + 1)) * time.Second, DEBUG_CACHE)
+
 	var memCustomMsgs map[string][]string = map[string][]string{}
-	var oneCustomMsg []string = []string{}
-	var sendCustomMsgToThisClient bool = false
-	var theCacheMsgHash string = ""
-
-	var crrMessageCmd string = ""
-	var crrMessageDat string = ""
-
-	var jsonData string = ""
+	var mtxCustomMsgs sync.RWMutex // use a RWMutex instead of Mutex ... currently uses no RLock/RUnlock but ... just in case ...
 
 	const defaultMessageCmd = "<PING>"
 	var defaultMessageDat = "PING, from the Server: [" + serverID + "]"
 
-	var connectedClients map[string]*websocket.Conn = map[string]*websocket.Conn{}
-
 	//--
 
 	setNewTask := func(theMsgCmd string, theMsgData string, theArea string) (err string) {
+		//--
+		defer smart.PanicHandler()
 		//--
 		err = "" // initialize
 		//--
@@ -521,20 +612,42 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		} //end if
 		//--
 		theMsgCmd = "<" + smart.StrToUpper(theMsgCmd) + ">"
-		for k, _ := range connectedClients {
+		//--
+		var numConnCli int = 0
+		//--
+		var errConnCli int = 0
+		connectedClients.Range(func(kk, vv interface{}) bool {
+			//--
+			numConnCli++
+			//--
+			k := string(fmt.Sprint(kk)) // convert from type interface to string
+			if(DEBUG == true) {
+				log.Println("[DEBUG] Task Command: Connected Client found # UUID:", k)
+			} //end if
+			//--
+			mtxCustomMsgs.Lock()
+			//--
 			if(len(memCustomMsgs[k]) < int(MAX_QUEUE_MESSAGES)) { // hardcoded
 				memCustomMsgs[k] = append(memCustomMsgs[k], smart.Base64Encode(theMsgCmd) + "|" + smart.Base64Encode(theMsgData) + "|" + smart.Base64Encode(smart.DateNowIsoUtc()))
 				if(DEBUG == true) {
 					log.Println("[DEBUG] +++++++ Register Task Command for Client: `" + k + "` in Queue: `" + theMsgCmd + "`")
 				} //end if
 			} else {
-				err = "Failed to Register new Task Command for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`"
-				log.Println("[WARNING] !!!!!!! " + err)
-				return
+				errConnCli++
+				log.Println("[WARNING] !!!!!!! Failed to Register new Task Command for Client: `" + k + "` # Queue is full: `" + theMsgCmd + "`")
 			} //end if else
-		} //end for
+			//--
+			mtxCustomMsgs.Unlock()
+			//--
+			return true
+			//--
+		})
+		if(errConnCli > 0) {
+			err = "Failed to Register new Task Command for " + smart.ConvertIntToStr(errConnCli) + " Clients # `" + theMsgCmd + "`"
+			return
+		} //end if
 		//--
-		log.Println("[OK] New Task Command was Set by {" + theArea + "} for", len(connectedClients), "connected clients: `" + theMsgCmd + "` ; Data-Length:", lenMsgData, "bytes")
+		log.Println("[OK] New Task Command was Set by {" + theArea + "} for", numConnCli, "connected client(s): `" + theMsgCmd + "` ; Data-Length:", lenMsgData, "bytes")
 		return ""
 		//--
 	} //END FUNCTION
@@ -562,6 +675,13 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		defer smart.PanicHandler()
 		//--
+		var oneCustomMsg []string = []string{}
+		var sendCustomMsgToThisClient bool = false
+		var theCacheMsgHash string = ""
+		//--
+		var crrMessageCmd string = ""
+		var crrMessageDat string = ""
+		//--
 		for {
 			//--
 			if(conn == nil) {
@@ -572,7 +692,11 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			theCacheMsgHash = "" // init
 			sendCustomMsgToThisClient = false // init
 			//--
-			log.Println("[DEBUG] ≡≡≡≡≡≡≡ Client Task Commands Queue Length:", len(memCustomMsgs), "≡≡≡≡≡≡≡")
+			//===
+			//--
+			mtxCustomMsgs.Lock() // use just lock for read and writes
+			//--
+			log.Println("[DEBUG] ≡≡≡≡≡≡≡ Task Commands Queue Length # Client(s):", len(memCustomMsgs), "≡≡≡≡≡≡≡")
 			if(DEBUG == true) {
 				log.Println("[DATA] Message Queue:", memCustomMsgs)
 			} //end if
@@ -603,6 +727,10 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 					} //end if
 				} //end if
 			} //end if
+			//--
+			mtxCustomMsgs.Unlock()
+			//--
+			//===
 			//--
 			if(sendCustomMsgToThisClient == true) {
 				//--
@@ -648,14 +776,23 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			theCacheMsgHash = "" // reset
 			oneCustomMsg = []string{} // reset
 			//--
-			jsonData = smart.JsonEncode(crrMessageDat)
-			log.Println("[NOTICE] @@@ Broadcasting " + crrMessageCmd + " Message to Client(s), Data-Size:", len(jsonData), "bytes")
-			msg, errMsg := msgPakComposeMessage(crrMessageCmd, jsonData, sharedEncPrivKey)
-			jsonData = "" // free mem
+			log.Println("[NOTICE] @@@ Broadcasting " + crrMessageCmd + " Message to Client{" + rAddr + "}, Data-Size:", len(crrMessageDat), "bytes")
+			//--
+			cliShardIntf, cliShardExst := dhkxSrvKeysClients.Load(rAddr)
+			var cliShardStr string = ""
+			if(cliShardExst) {
+				cliShardStr = string(fmt.Sprint(cliShardIntf)) // convert from type interface to string
+			} //end if
+			if(smart.StrTrimWhitespaces(cliShardStr) == "") {
+				log.Println("[WARNING] @@@ Broadcasting # Client{" + rAddr + "} Shared Key is Empty")
+				break
+			} //end if
+			//--
+			msg, errMsg := msgPakComposeMessage(crrMessageCmd, crrMessageDat, sharedEncPrivKey, cliShardStr)
 			//--
 			if(errMsg != "") {
 				//--
-				log.Println("[ERROR] Send Message to Client:", errMsg)
+				log.Println("[ERROR] @@@ Broadcasting # Send Message to Client{" + rAddr + "}:", errMsg)
 				break
 				//--
 			} else {
@@ -664,12 +801,12 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 				//--
 				if(errWrs != nil) {
 					//--
-					log.Println("[ERROR] Send Message to Client / Writing to websocket Failed:", errWrs)
+					log.Println("[ERROR] @@@ Broadcasting # Send Message to Client{" + rAddr + "} / Writing to websocket Failed:", errWrs)
 					break
 					//--
 				} else {
 					//--
-					log.Println("[OK] Send Message to Client:", rAddr)
+					log.Println("[OK] @@@ Broadcasting # Send Message completed to Client{" + rAddr + "}")
 					//--
 				} //end if else
 				//--
@@ -702,9 +839,9 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		conn, err := srvWebSockUpgrader.Upgrade(w, r, nil)
 		//--
-		connectedClients[r.RemoteAddr] = conn
+		connectedClients.Store(r.RemoteAddr, conn)
 		defer func() {
-			delete(connectedClients, r.RemoteAddr)
+			connectedClients.Delete(r.RemoteAddr)
 			connCloseSocket(conn)
 		}()
 		//--
@@ -712,6 +849,90 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			log.Println("[ERROR] Connection Upgrade Failed:", err)
 			return
 		} //end if
+		//--
+		log.Println("New Pre-Connection (DhKx Exchange) <-> <-> <-> to:", conn.LocalAddr(), "From:", r.RemoteAddr)
+		time.Sleep(time.Duration(2) * time.Second)
+		//--
+		var serverSendDhKxToClient dhkx.HandleDhkxSrvSendFunc = func(srvPubKey []byte, grpID int) string {
+			//--
+			msg, errCompose := msgPakComposeMessage("<DHKX:CLI>", smart.ConvertIntToStr(grpID) + ":" + smart.BaseEncode(srvPubKey, "b62"), sharedEncPrivKey, "")
+			if(errCompose != "") {
+				return "Send (to Client) ERR (1): " + errCompose
+			} //end if
+			err := connWriteTxtMsgToSocket(conn, []byte(msg), WAIT_DHKX_LIMIT_SECONDS)
+			if(err != nil) {
+				return "Send (to Client) ERR (2): " + err.Error()
+			} //end if
+			return ""
+			//--
+		} //end function
+		var groupID int = dhkx.DhKxGetRandomGroup(true) // high only
+		errSrvStep1, grpSrv, privSrv, _ := dhkx.DhKxServerInitExchange(groupID, serverSendDhKxToClient)
+		if(errSrvStep1 != "") {
+			log.Println("[ERROR]: DhKx #1 " + errSrvStep1)
+			return
+		} //end if
+		var serverRecvDhKxFromClient dhkx.HandleDhkxSrvRecvFunc = func(srvPubKey []byte) (string, []byte, []byte) {
+			//--
+			msgType, message, err := connReadFromSocket(conn, WAIT_DHKX_LIMIT_SECONDS)
+			if(err != nil) {
+				return "Recv (from Client) ERR: " + err.Error(), nil, nil
+			} //end if
+			if(msgType != websocket.TextMessage) {
+				return "Recv (from Client) ERR: Not a Text Message", nil, nil
+			} //end if
+			//--
+			msg, errMsg := msgPakParseMessage(string(message), sharedEncPrivKey, "")
+			if(errMsg != "") {
+				return "Recv (from Client) ERR: Invalid Message: " + errMsg, nil, nil
+			} //end if
+			if(smart.StrStartsWith(msg.Cmd, "<ERR:DHKX:")) {
+				return "Recv (from Client) ERR: Message Cmd Failed: `" + msg.Cmd + "` # " + msg.Data, nil, nil
+			} //end if
+			if(msg.Cmd != "<DHKX:SRV>") {
+				return "Recv (from Client) ERR: Invalid Message Cmd: `" + msg.Cmd + "`", nil, nil
+			} //end if
+			decdata := smart.StrTrimWhitespaces(smart.BlowfishDecryptCBC(msg.Data, smart.BaseEncode(srvPubKey, "b92")))
+			if(decdata == "") {
+				return "Recv (from Client) ERR: Invalid Message Data Encryption", nil, nil
+			} //end if
+			data := smart.Explode(":", decdata)
+			if(len(data) != 2) {
+				return "Recv (from Client) ERR: Invalid Message Data Structure", nil, nil
+			} //end if
+			var cliPubKey []byte = smart.BaseDecode(data[0], "b58")
+			var cliExch []byte = smart.BaseDecode(data[1], "b62")
+			//--
+			return "", cliPubKey, cliExch
+			//--
+		} //END FUNCTION
+		errSrvRecv1GenShardStep2, recvPubCli, shardSrv := dhkx.DhKxServerFinalizeExchange(grpSrv, privSrv, serverRecvDhKxFromClient)
+		if(errSrvRecv1GenShardStep2 != "") {
+			log.Println("[ERROR]: DhKx #2 " + errSrvRecv1GenShardStep2)
+			return
+		} //end if
+		if(recvPubCli == nil) {
+			log.Println("[ERROR]: DhKx #2 CliPubKey is NULL")
+			return
+		} //end if
+		shardSrv = smart.StrTrimWhitespaces(shardSrv)
+		if(shardSrv == "") {
+			log.Println("[ERROR]: DhKx #2 SharedSecret is EMPTY")
+			return
+		} //end if
+		if(smart.StrTrimWhitespaces(smart.Base64Decode(shardSrv)) == "") {
+			log.Println("[ERROR]: DhKx #2 SharedSecret is INVALID")
+			return
+		} //end if
+		if(DEBUG == true) {
+			log.Println("[DEBUG] DhKx SharedSecret:", shardSrv)
+		} //end if
+		dhkxSrvKeysClients.Store(r.RemoteAddr, shardSrv)
+		defer func() {
+			dhkxSrvKeysClients.Delete(r.RemoteAddr)
+		}()
+		log.Println("[OK] <-> <-> <-> DhKx Exchange Completed:", conn.LocalAddr(), "<->", r.RemoteAddr, "/ Key-Length:", len(shardSrv), "bytes")
+		time.Sleep(time.Duration(2) * time.Second)
 		//--
 		log.Println("New Connection to:", conn.LocalAddr(), "From:", r.RemoteAddr)
 		//-- The event loop
@@ -724,14 +945,27 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 				log.Println("[ERROR] Message Reading Failed (interval", intervalMsgSeconds, "sec.):", err)
 				break
 			} //end if
+			//--
 			if(DEBUG == true) {
 				log.Println("[DEBUG] Server: [", conn.LocalAddr(), "] # Got New Message from Client: {" + r.RemoteAddr + "} # Type:", messageType)
 			} //end if
 			//--
 			if(messageType == websocket.TextMessage) {
+				//--
 				msgHash = msgPakGenerateMessageHash(message) // {{{SYNC-MSGPAK-MSGHASH}}}
-				log.Println("[INFO] Message Received from Client{" + r.RemoteAddr + "} # Message-Hash: " + msgHash)
-				mRecvOk, mRepl, errMsg := msgPakHandleMessage(conn, true, serverID, r.RemoteAddr, msgHash, intervalMsgSeconds, string(message), sharedEncPrivKey, handleMessagesFunc)
+				//--
+				log.Println("[NOTICE] Message Received from Client{" + r.RemoteAddr + "} # Message-Hash: " + msgHash + " ; Package Size:", len(message), "bytes")
+				//--
+				cliShardIntf, cliShardExst := dhkxSrvKeysClients.Load(r.RemoteAddr)
+				var cliShardStr string = ""
+				if(cliShardExst) {
+					cliShardStr = string(fmt.Sprint(cliShardIntf)) // convert from type interface to string
+				} //end if
+				if(smart.StrTrimWhitespaces(cliShardStr) == "") {
+					log.Println("[WARNING] Client Shared Key is Empty")
+					break
+				} //end if
+				mRecvOk, mRepl, errMsg, _ := msgPakHandleMessage(conn, true, serverID, r.RemoteAddr, msgHash, intervalMsgSeconds, string(message), sharedEncPrivKey, cliShardStr, handleMessagesFunc)
 				message = nil
 				if(mRecvOk != true) {
 					log.Println("[ERROR] Invalid Message received from Client{" + r.RemoteAddr + "} # Message-Hash: " + msgHash + " ; Details: " + errMsg)
@@ -740,14 +974,18 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 					if(errMsg != "") {
 						log.Println("[ERROR] Failed to Reply back to Message from Client{" + r.RemoteAddr + "} # Message-Hash: " + msgHash + " ; Details: " + errMsg)
 					} else {
-						if(mRepl == true) { // if replied
+						if(mRepl == true) {
 							log.Println("[OK] Reply back to Message from Client{" + r.RemoteAddr + "} # Message-Hash: " + msgHash)
 						} //end if else
 					} //end if else
 				} //end if else
+				//--
 				msgHash = ""
+				//--
 			} else {
+				//--
 				log.Println("[ERROR]: TextMessage is expected from Client{" + r.RemoteAddr + "}")
+				//--
 			} //end if else
 			//--
 		} //end for
@@ -844,6 +1082,10 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 
 	//--
 
+	defer smart.PanicHandler()
+
+	//--
+
 	if(serverPool == nil) {
 		serverPool = []string{}
 	} //end if
@@ -908,6 +1150,9 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 	var done chan interface{}
 	var interrupt chan os.Signal
 
+	var connectedServers sync.Map
+	var dhkxCliKeysServers sync.Map
+
 	receiveHandler := func(conn *websocket.Conn, theServerAddr string) {
 		//--
 		defer smart.PanicHandler()
@@ -920,7 +1165,7 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 		defer close(done)
 		//--
 		var msgHash string = ""
-		var lenMsg int = 0
+		var firstMessageCompleted bool = false
 		for {
 			//--
 			messageType, message, err := connReadFromSocket(conn, intervalMsgSeconds)
@@ -929,20 +1174,35 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 				return
 			} //end if
 			//--
-			lenMsg = len(message)
 			if(DEBUG == true) {
 				log.Println("[DEBUG] Client # Got New Message from Server:{", theServerAddr + "} # Type:", messageType)
 			} //end if
 			//--
 			if(messageType == websocket.TextMessage) {
 				//--
-				log.Println("[NOTICE] Client Message received from Server, Package Size:", lenMsg, "bytes")
-			//	if(DEBUG == true) {
-			//		log.Println("[DATA] The message received from server: `" + string(message) + "`")
-			//	} //end if
-				//--
 				msgHash = msgPakGenerateMessageHash(message) // {{{SYNC-MSGPAK-MSGHASH}}}
-				mRecvOk, mRepl, errMsg := msgPakHandleMessage(conn, false, clientID, theServerAddr, msgHash, intervalMsgSeconds, string(message), sharedEncPrivKey, handleMessagesFunc)
+				//--
+				log.Println("[NOTICE] Message Received from Server{" + theServerAddr + "} # Message-Hash: " + msgHash + " ; Package Size:", len(message), "bytes")
+				//--
+				srvShardIntf, srvShardExst := dhkxCliKeysServers.Load(theServerAddr)
+				var srvShardStr string = ""
+				if(srvShardExst) {
+					srvShardStr = string(fmt.Sprint(srvShardIntf)) // convert from type interface to string
+				} //end if
+				if(firstMessageCompleted == true) {
+					if(smart.StrTrimWhitespaces(srvShardStr) == "") {
+						log.Println("[WARNING] Server{" + theServerAddr + "} Shared Key is Empty ...")
+						break
+					} //end if
+				} //end if
+				//--
+				mRecvOk, mRepl, errMsg, cliShared := msgPakHandleMessage(conn, false, clientID, theServerAddr, msgHash, intervalMsgSeconds, string(message), sharedEncPrivKey, srvShardStr, handleMessagesFunc)
+				if(firstMessageCompleted != true) {
+					if(cliShared != "") {
+						dhkxCliKeysServers.Store(theServerAddr, cliShared)
+						log.Println("[OK] <-> <-> <-> DhKx Exchange Completed:", clientID, "<->", theServerAddr, "/ Key-Length:", len(cliShared), "bytes")
+					} //end if
+				} //end if
 				message = nil
 				if(mRecvOk != true) {
 					log.Println("[ERROR] Invalid Message received from Server{" + theServerAddr + "} # Message-Hash: " + msgHash + " ; Details: " + errMsg)
@@ -951,11 +1211,12 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 					if(errMsg != "") {
 						log.Println("[ERROR] Failed to Reply back to Message from Server{" + theServerAddr + "} # Message-Hash: " + msgHash + " ; Details: " + errMsg)
 					} else {
-						if(mRepl == true) { // if replied
+						if(mRepl == true) {
 							log.Println("[OK] Reply back to Message from Server{" + theServerAddr + "} # Message-Hash: " + msgHash)
 						} //end if else
 					} //end if else
 				} //end if else
+				//--
 				msgHash = ""
 				//--
 			} else {
@@ -964,16 +1225,19 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 				//--
 			} //end if
 			//--
+			if(firstMessageCompleted != true) {
+				firstMessageCompleted = true
+			} //end if
+			//--
 		} //end for
 		//--
 	} //end function
-
-	var connectedServers map[string]*websocket.Conn = map[string]*websocket.Conn{}
 
 	connectToServer := func(addr string) {
 		//--
 		defer smart.PanicHandler()
 		//--
+		dhkxCliKeysServers.Delete(addr)
 		log.Println("[NOTICE] Connecting to Server:", addr, "MODE:", tlsMode)
 		//--
 		addr = smart.StrTrimWhitespaces(addr)
@@ -1035,9 +1299,10 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 		conn, response, err := securewebsocket.Dial(socketPrefix + addr + socketSuffix, h)
 	//	conn, response, err := websocket.DefaultDialer.Dial(socketPrefix + addr + socketSuffix, h)
 		//--
-		connectedServers[addr] = conn
+		connectedServers.Store(addr, conn)
 		defer func() {
-			delete(connectedServers, addr)
+			dhkxCliKeysServers.Delete(addr)
+			connectedServers.Delete(addr)
 			connCloseSocket(conn)
 		}()
 		//--
@@ -1052,24 +1317,40 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 		//--
 		go receiveHandler(conn, addr)
 		//-- the main loop for the client
+		var firstMessageCompleted bool = false
 		for {
+			//--
+			srvShardIntf, srvShardExst := dhkxCliKeysServers.Load(addr)
+			var srvShardStr string = ""
+			if(srvShardExst) {
+				srvShardStr = string(fmt.Sprint(srvShardIntf)) // convert from type interface to string
+			} //end if
 			//--
 			select {
 				case <-time.After(time.Duration(intervalMsgSeconds) * time.Second):
-					log.Println("[NOTICE] Sending <PONG> Message to Server")
-					msg, errMsg := msgPakComposeMessage("<PONG>", smart.JsonEncode("PONG, from Client: `" + clientID + "`"), sharedEncPrivKey)
-					if(errMsg != "") {
-						log.Println("[ERROR]:", errMsg)
-						return
-					} else {
-						err := connWriteTxtMsgToSocket(conn, []byte(msg), intervalMsgSeconds)
-						if(err != nil) {
-							log.Println("[ERROR] Writing to websocket Failed:", err)
-							return
+					if(smart.StrTrimWhitespaces(srvShardStr) == "") {
+						if(firstMessageCompleted == true) {
+							log.Println("[WARNING] SKIP: Sending <PONG> Message to Server{" + addr + "}, Server Shared Key is Empty ...")
 						} //end if
+					} else {
+						log.Println("[NOTICE] Sending <PONG> Message to Server {" + addr + "}")
+						msg, errMsg := msgPakComposeMessage("<PONG>", "PONG, from Client: `" + clientID + "`", sharedEncPrivKey, srvShardStr)
+						if(errMsg != "") {
+							log.Println("[ERROR]:", errMsg)
+							return
+						} else {
+							err := connWriteTxtMsgToSocket(conn, []byte(msg), intervalMsgSeconds)
+							if(err != nil) {
+								log.Println("[ERROR] Writing to websocket Failed:", err)
+								return
+							} //end if
+						} //end if else
+						msg = ""
+						errMsg = ""
 					} //end if else
-					msg = ""
-					errMsg = ""
+					if(firstMessageCompleted != true) {
+						firstMessageCompleted = true
+					} //end if
 				case <-interrupt: // received a SIGINT (Ctrl + C). Terminate gracefully...
 					log.Println("[NOTICE] Received SIGINT interrupt signal. Closing all pending connections")
 					err := connWriteCloseMsgToSocket(conn, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")) // close websocket connection
@@ -1108,7 +1389,7 @@ func MsgPakClientRun(serverPool []string, clientID string, tlsMode string, certi
 			} //end if
 			//--
 			for _, p := range serverPool {
-				if _, exist := connectedServers[p]; exist {
+				if _, exist := connectedServers.Load(p); exist {
 					log.Println("[INFO] Client Connection appears REGISTERED with Server:", p)
 				} else {
 					if(initConn == true) {

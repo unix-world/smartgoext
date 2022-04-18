@@ -1,4 +1,12 @@
+
+//--
+// MIT License
+// Copyright (c) 2017 Serge Zaitsev
 //
+// Copyright (c) 2018-2022 unix-world.org
+// v.20220415.2336
+//--
+
 // Package webview implements Go bindings to https://github.com/zserge/webview C library.
 //
 // Bindings closely repeat the C APIs and include both, a simplified
@@ -7,7 +15,7 @@
 //
 // The library uses gtk-webkit, Cocoa/Webkit and MSHTML (IE8..11) as a browser
 // engine and supports Linux, MacOS and Windows 7..10 respectively.
-//
+
 package webview
 
 /*
@@ -570,3 +578,5 @@ func (w *webview) Bind(name string, v interface{}) (sync func(), err error) {
 	sync()
 	return sync, nil
 }
+
+// #END

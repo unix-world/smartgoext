@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220416.1012 :: STABLE
+// r.20220419.1308 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -35,7 +35,7 @@ import (
 
 
 const (
-	VERSION string = "r.20220416.1012"
+	VERSION string = "r.20220419.1308"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -489,7 +489,7 @@ func msgPakGenerateMessageHash(msg []byte) string {
 //-- server
 
 
-func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc, cronMsgTasks []CronMsgTask) bool {
+func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr string, httpPort uint16, allowedIPs string, authUsername string, authPassword string, sharedEncPrivKey string, intervalMsgSeconds uint32, handleMessagesFunc HandleMessagesFunc, allowedHttpCustomCmds map[string]bool, cronMsgTasks []CronMsgTask) bool {
 
 	//--
 
@@ -561,6 +561,15 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 	} else if(intervalMsgSeconds > LIMIT_INTERVAL_SECONDS_MAX) { // {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
 		log.Println("[ERROR] MsgPak Server: Max allowed Message Interval Seconds is", LIMIT_INTERVAL_SECONDS_MAX, "seconds but is set to:", intervalMsgSeconds)
 		return false
+	} //end if
+
+	var allowedHttpCmds sync.Map
+	if(allowedHttpCustomCmds != nil) {
+		for ks, vs := range allowedHttpCustomCmds {
+			if(vs == true) {
+				allowedHttpCmds.Store(ks, vs)
+			} //end if
+		} //end for
 	} //end if
 
 	//-- #
@@ -996,6 +1005,11 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 
 	srvHandlerCustomMsg := func(w http.ResponseWriter, r *http.Request) {
 		//--
+		if(allowedHttpCustomCmds == nil) {
+			smarthttputils.HttpStatus503(w, r, "This service area is NOT Active", true)
+			return
+		} //end if
+		//--
 		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, true) // outputs: HTML
 		if(authErr != "") {
 			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication Failed:", authErr)
@@ -1013,12 +1027,33 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			isRequestOk = false
 		} //end if
 		//--
-		var errSetTask string = setNewTask(custommsg[0], customdata[0], "HTTP(S) Task Command (" + r.RemoteAddr + ")")
-		if(errSetTask != "") {
-			isRequestOk = false
+		if(isRequestOk == true) {
+			custommsg[0] = smart.StrTrimWhitespaces(custommsg[0])
+			if(custommsg[0] == "") {
+				isRequestOk = false
+			} //end if
+		} //end if
+		if(isRequestOk == true) {
+			custommsg[0] = smart.StrToUpper(custommsg[0])
+			_, cmdExst := allowedHttpCmds.Load(custommsg[0])
+			if(!cmdExst) {
+				isRequestOk = false
+			} //end if
+		} //end if
+		//--
+		var errSetTask string = ""
+		//--
+		if(isRequestOk == true) {
+			errSetTask = setNewTask(custommsg[0], customdata[0], "HTTP(S) Task Command (" + r.RemoteAddr + ")")
+			if(errSetTask != "") {
+				isRequestOk = false
+			} //end if
 		} //end if
 		//--
 		if(isRequestOk != true) {
+			if(errSetTask == "") {
+				errSetTask = "Command is Invalid Or Disallowed"
+			} //end if
 			smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `msg` : string, `data` : string ] # " + errSetTask, true)
 			return
 		} //end if

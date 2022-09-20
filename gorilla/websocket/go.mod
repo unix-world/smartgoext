@@ -1,3 +1,3 @@
-module github.com/unix-world/smartgoext/gorilla/websocket
+module github.com/gorilla/websocket
 
 go 1.12

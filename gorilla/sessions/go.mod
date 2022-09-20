@@ -1,3 +1,3 @@
-module github.com/unix-world/smartgoext/gorilla/sessions
+module github.com/gorilla/sessions
 
-require github.com/unix-world/smartgoext/gorilla/securecookie latest
+require github.com/gorilla/securecookie v1.1.1

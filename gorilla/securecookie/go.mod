@@ -1,1 +1,1 @@
-module github.com/unix-world/smartgoext/gorilla/securecookie
+module github.com/gorilla/securecookie

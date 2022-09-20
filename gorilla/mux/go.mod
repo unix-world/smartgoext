@@ -1,3 +1,3 @@
-module github.com/unix-world/smartgoext/gorilla/mux
+module github.com/gorilla/mux
 
 go 1.12

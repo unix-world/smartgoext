@@ -614,14 +614,14 @@ func (w *messageWriter) flushFrame(final bool, extra []byte) error {
 	// documentation for more info.
 
 	if c.isWriting {
-		panic("concurrent write to websocket connection (1)")
+		panic("concurrent write to websocket connection")
 	}
 	c.isWriting = true
 
 	err := c.write(w.frameType, c.writeDeadline, c.writeBuf[framePos:w.pos], extra)
 
 	if !c.isWriting {
-		panic("concurrent write to websocket connection (2)")
+		panic("concurrent write to websocket connection")
 	}
 	c.isWriting = false
 
@@ -742,12 +742,12 @@ func (c *Conn) WritePreparedMessage(pm *PreparedMessage) error {
 		return err
 	}
 	if c.isWriting {
-		panic("concurrent write to websocket connection (3)")
+		panic("concurrent write to websocket connection")
 	}
 	c.isWriting = true
 	err = c.write(frameType, c.writeDeadline, frameData, nil)
 	if !c.isWriting {
-		panic("concurrent write to websocket connection (4)")
+		panic("concurrent write to websocket connection")
 	}
 	c.isWriting = false
 	return err
@@ -1189,8 +1189,16 @@ func (c *Conn) SetPongHandler(h func(appData string) error) {
 	c.handlePong = h
 }
 
+// NetConn returns the underlying connection that is wrapped by c.
+// Note that writing to or reading from this connection directly will corrupt the
+// WebSocket connection.
+func (c *Conn) NetConn() net.Conn {
+	return c.conn
+}
+
 // UnderlyingConn returns the internal net.Conn. This can be used to further
 // modifications to connection specific flags.
+// Deprecated: Use the NetConn method.
 func (c *Conn) UnderlyingConn() net.Conn {
 	return c.conn
 }

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/unix-world/smartgoext/gorilla/securecookie"
+	"github.com/gorilla/securecookie"
 )
 
 // Store is an interface for custom session stores.

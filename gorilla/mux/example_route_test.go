@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/unix-world/smartgoext/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
 // This example demonstrates setting a regular expression matcher for

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebDAV Server :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220428.2253 :: STABLE
+// r.20220928.1644 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package webdavsrv
@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	VERSION string = "r.20220428.2253"
+	VERSION string = "r.20220928.1644"
+	SIGNATURE string = "(c) 2020-2022 unix-world.org"
 
 	SERVER_ADDR string = "127.0.0.1"
 	SERVER_PORT uint16 = 13787
@@ -105,7 +106,7 @@ func WebdavServerRun(storagePath string, serveSecure bool, certifPath string, ht
 
 	var serverSignature bytes.Buffer
 	serverSignature.WriteString(theStrSignature + "\n")
-	serverSignature.WriteString("(c) 2020-2022 unix-world.org" + "\n")
+	serverSignature.WriteString(SIGNATURE + "\n")
 	serverSignature.WriteString("\n")
 
 	if(serveSecure == true) {

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220920.1332 :: STABLE
+// r.20220928.1644 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20220920.1332"
+	VERSION string = "r.20220928.1644"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false

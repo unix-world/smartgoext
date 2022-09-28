@@ -144,8 +144,8 @@ func (ch *cors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //  import (
 //      "net/http"
 //
-//      "github.com/gorilla/handlers"
-//      "github.com/gorilla/mux"
+//      "github.com/unix-world/smartgoext/gorilla/handlers"
+//      "github.com/unix-world/smartgoext/gorilla/mux"
 //  )
 //
 //  func main() {

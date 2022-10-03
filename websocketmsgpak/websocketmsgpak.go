@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20220928.1644 :: STABLE
+// r.20221003.1448 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20220928.1644"
+	VERSION string = "r.20221003.1448"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -45,6 +45,7 @@ const (
 	HANDSHAKE_TIMEOUT_SECONDS uint32 = 45 		// default is 45
 	WAIT_DHKX_LIMIT_SECONDS  uint32 = 60 		// default is 60
 	WAIT_CLOSE_LIMIT_SECONDS uint32 =  2 		// default is 2
+	MAX_NUM_ERR_MSG_RECV uint8 = 8 				// default is 8 ; after this number of reecive errors, reset connection and force re-connect ; Implemented just for Client ; TODO: implement also for Server
 
 	MAX_META_MSG_SIZE uint32 	= 1 * 1000 * 1000 	// 1 MB
 	MAX_MSG_SIZE uint32 		= 16 * 1000 * 1000 	// 16 MB
@@ -1315,12 +1316,15 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 	var connectedServers sync.Map
 	var dhkxCliKeysServers sync.Map
 
+	var errHandlerReceive uint8 = 0
+
 	receiveHandler := func(conn *websocket.Conn, theServerAddr string) {
 		//--
 		defer smart.PanicHandler()
 		//--
 		if(conn == nil) {
 			log.Println("[ERROR] receiveHandler Failed:", "No Connection ...")
+			// DO NOT INCREMENT errHandlerReceive here ; it is not a RECV Error, it is NO_CONNECTION and is handled by the WATCHDOG
 			return
 		} //end if
 		//--
@@ -1333,6 +1337,7 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 			messageType, message, err := connReadFromSocket(conn, intervalMsgSeconds)
 			if(err != nil) {
 				log.Println("[ERROR] Message Receive Failed (interval", intervalMsgSeconds, "sec.):", err)
+				errHandlerReceive++
 				return
 			} //end if
 			//--
@@ -1354,7 +1359,8 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 				if(firstMessageCompleted == true) {
 					if(smart.StrTrimWhitespaces(srvShardStr) == "") {
 						log.Println("[WARNING] Server{" + theServerAddr + "} Shared Key is Empty ...")
-						break
+						errHandlerReceive++
+						return
 					} //end if
 				} //end if
 				//--
@@ -1496,6 +1502,12 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 		var crrCliCmd  string = ""
 		var crrCliData string = ""
 		for {
+			//--
+			if(errHandlerReceive >= MAX_NUM_ERR_MSG_RECV) {
+				log.Println("[INFO] Reset Connection to Server, Too many Message RECV Errors:", errHandlerReceive, "of Max Limit:", MAX_NUM_ERR_MSG_RECV)
+				errHandlerReceive = 0 // reset !
+				return // stop after any error from receive handler in order to force re-connect
+			} //end if
 			//--
 			srvShardIntf, srvShardExst := dhkxCliKeysServers.Load(addr)
 			var srvShardStr string = ""

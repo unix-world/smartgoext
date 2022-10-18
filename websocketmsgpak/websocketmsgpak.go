@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2022 unix-world.org
-// r.20221003.1448 :: STABLE
+// r.20221018.1832 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,22 +37,22 @@ import (
 
 
 const (
-	VERSION string = "r.20221003.1448"
+	VERSION string = "r.20221018.1832"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
 
-	HANDSHAKE_TIMEOUT_SECONDS uint32 = 45 		// default is 45
-	WAIT_DHKX_LIMIT_SECONDS  uint32 = 60 		// default is 60
-	WAIT_CLOSE_LIMIT_SECONDS uint32 =  2 		// default is 2
-	MAX_NUM_ERR_MSG_RECV uint8 = 8 				// default is 8 ; after this number of reecive errors, reset connection and force re-connect ; Implemented just for Client ; TODO: implement also for Server
+	HANDSHAKE_TIMEOUT_SECONDS uint32 	= 45 		// default is 45
+	WAIT_DHKX_LIMIT_SECONDS  uint32 	= 60 		// default is 60
+	WAIT_CLOSE_LIMIT_SECONDS uint32 	=  2 		// default is 2
+	MAX_NUM_ERR_MSG_RECV uint8 			=  8 		// default is 8 ; after this number of reecive errors, reset connection and force re-connect ; Implemented just for Client ; TODO: implement also for Server
 
-	MAX_META_MSG_SIZE uint32 	= 1 * 1000 * 1000 	// 1 MB
+	MAX_META_MSG_SIZE uint32 	=  1 * 1000 * 1000 	//  1 MB
 	MAX_MSG_SIZE uint32 		= 16 * 1000 * 1000 	// 16 MB
 	MAX_QUEUE_MESSAGES uint8 	= 100 				// must be between: 1..255
 
-	LIMIT_INTERVAL_SECONDS_MIN uint32 = 10 		// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
-	LIMIT_INTERVAL_SECONDS_MAX uint32 = 3600 	// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
+	LIMIT_INTERVAL_SECONDS_MIN uint32 = 10 			// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
+	LIMIT_INTERVAL_SECONDS_MAX uint32 = 3600 		// {{{SYNC-MSGPAK-INTERVAL-LIMITS}}}
 
 	CERTIFICATES_DEFAULT_PATH string = "./ssl"
 	CERTIFICATE_PEM_CRT string = "cert.crt"
@@ -1107,7 +1107,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			_, hasParamCmd := r.Form["cmd"]
 			_, hasParamData  := r.Form["data"]
 			if((hasParamCmd != true) && (hasParamData != true)) {
-				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<form name="new-task-form" method="post" action="msgsend" class="ux-form">` + "\n" + `<div class="operation_success">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:300px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:300px; height:200px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="submit" class="ux-button ux-button-special">Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", "no-cache", nil)
+				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<form name="new-task-form" method="post" action="msgsend" class="ux-form">` + "\n" + `<div class="operation_success">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:300px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:300px; height:200px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="submit" class="ux-button ux-button-special"><i class="sfi sfi-new-tab"></i>&nbsp;&nbsp; Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", "no-cache", nil)
 				return
 			} //end if
 		} else if(r.Method == http.MethodPost) { // POST

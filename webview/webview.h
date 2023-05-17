@@ -351,7 +351,7 @@ WEBVIEW_API int webview_init(struct webview *w) {
   webkit_settings_set_default_charset(settings, "UTF-8");
   webkit_settings_set_user_agent(settings, webkit_settings_get_user_agent(settings));
   //webkit_settings_set_enable_plugins(settings, false); // deprecated
-  webkit_settings_set_enable_java(settings, false);
+  //webkit_settings_set_enable_java(settings, false); // deprecated
   webkit_settings_set_javascript_can_access_clipboard(settings, false);
   webkit_settings_set_javascript_can_open_windows_automatically(settings, false);
   webkit_settings_set_allow_modal_dialogs(settings, true);
@@ -362,7 +362,7 @@ WEBVIEW_API int webview_init(struct webview *w) {
   //webkit_settings_set_enable_webgl(settings, false); // anyway, should alow webgl if available ...
   //webkit_settings_set_enable_accelerated_2d_canvas(settings, false); // deprecated
   webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER); // WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND
-  webkit_settings_set_enable_xss_auditor(settings, true);
+  //webkit_settings_set_enable_xss_auditor(settings, true); // deprecated
   webkit_settings_set_enable_tabs_to_links(settings, false);
   webkit_settings_set_allow_modal_dialogs(settings, true);
   //-- #unixman

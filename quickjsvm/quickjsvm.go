@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
-// (c) 2020-2022 unix-world.org
-// r.20220928.1644 :: STABLE
+// (c) 2020-2023 unix-world.org
+// r.20230914.1548 :: STABLE
 
 // Req: go 1.16 or later
 package quickjsvm
@@ -18,7 +18,7 @@ import (
 	smart "github.com/unix-world/smartgo"
 )
 
-const VERSION string = "r.20220928.1644"
+const VERSION string = "r.20230914.1548"
 
 
 type quickJsVmEvalResult struct {
@@ -101,8 +101,10 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 		} //end for
 		jsonArgs := smart.JsonEncode(theArgs)
 		//--
-		jsonStruct := smart.JsonObjDecode(jsonArgs)
-		if(jsonStruct != nil) {
+		jsonStruct, jsonErrStruct := smart.JsonObjDecode(jsonArgs)
+		if(jsonErrStruct != nil) {
+			log.Println("[ERROR] Malformed JSON Data:", jsonErrStruct)
+		} else if(jsonStruct != nil) {
 			var txt string = ""
 			keys := make([]string, 0)
 			for xx, _ := range jsonStruct {

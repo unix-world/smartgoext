@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
-// (c) 2020-2022 unix-world.org
-// r.20221018.1832 :: STABLE
+// (c) 2020-2023 unix-world.org
+// r.20230914.1548 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20221018.1832"
+	VERSION string = "r.20230914.1548"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -210,9 +210,9 @@ func msgPakParseMessage(msg string, sharedPrivateKey string, sharedSecret string
 		return nil, "MsgPak: Message is empty after Unarchiving"
 	} //end if
 	//--
-	D := smart.JsonObjDecode(msg)
-	if(D == nil) {
-		return nil, "MsgPak: Message Decoding FAILED"
+	D, DErr := smart.JsonObjDecode(msg)
+	if((DErr != nil) || (D == nil)) {
+		return nil, "MsgPak: Message Decoding FAILED: " + DErr.Error()
 	} //end if
 	//--
 	sMsg := &messagePack{

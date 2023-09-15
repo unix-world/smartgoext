@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / QuickJsVm :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20230914.1548 :: STABLE
+// r.20230915.0918 :: STABLE
 
 // Req: go 1.16 or later
 package quickjsvm
@@ -18,7 +18,7 @@ import (
 	smart "github.com/unix-world/smartgo"
 )
 
-const VERSION string = "r.20230914.1548"
+const VERSION string = "r.20230915.0918"
 
 
 type quickJsVmEvalResult struct {
@@ -99,7 +99,11 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 		for kk, vv := range args {
 			theArgs["arg:" + smart.ConvertIntToStr(kk)] = vv.String()
 		} //end for
-		jsonArgs := smart.JsonEncode(theArgs)
+		jsonArgs, jsonErrArgs := smart.JsonEncode(theArgs, false, true)
+		if(jsonErrArgs != nil) {
+			jsonArgs = ""
+			log.Println("[ERROR] Malformed JSON Args:", theArgs)
+		}
 		//--
 		jsonStruct, jsonErrStruct := smart.JsonObjDecode(jsonArgs)
 		if(jsonErrStruct != nil) {
@@ -136,7 +140,7 @@ func quickJsVmEvalCode(jsCode string, jsMemMB uint16, jsInputData map[string]str
 	//--
 	globals := context.Globals()
 	jsInputData["JSON"] = "GoLangQuickJsVm"
-	json := context.String(smart.JsonEncode(jsInputData))
+	json := context.String(smart.JsonNoErrChkEncode(jsInputData, false, true))
 	globals.Set("jsonInput", json)
 	//--
 	globals.Set("SmartJsVm_consoleLog", context.Function(consoleLog)) // set method for Javascript

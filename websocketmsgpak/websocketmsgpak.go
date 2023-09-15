@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20230914.1548 :: STABLE
+// r.20230915.0918 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20230914.1548"
+	VERSION string = "r.20230915.0918"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -178,7 +178,7 @@ func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string, shar
 		smart.Sha512(cmd + "\n" + dataEnc + "\n" + data),
 	}
 	//--
-	dataEnc = smart.DataArchive(smart.JsonEncode(sMsg))
+	dataEnc = smart.DataArchive(smart.JsonNoErrChkEncode(sMsg, false, true))
 	sMsg = nil
 	//--
 	var crrLen int = len(dataEnc)

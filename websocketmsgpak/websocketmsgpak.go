@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20230915.0918 :: STABLE
+// r.20230922.2252 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20230915.0918"
+	VERSION string = "r.20230922.2252"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -615,7 +615,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		log.Println("[ERROR] MsgPak Server: Empty Auth Password")
 		return false
 	} //end if
-	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 30)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
+	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 255)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
 		log.Println("[ERROR] MsgPak Server: Invalid Auth UserName Length: must be between 7 and 30 characters")
 		return false
 	} //end if
@@ -1107,7 +1107,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			_, hasParamCmd := r.Form["cmd"]
 			_, hasParamData  := r.Form["data"]
 			if((hasParamCmd != true) && (hasParamData != true)) {
-				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<form name="new-task-form" method="post" action="msgsend" class="ux-form">` + "\n" + `<div class="operation_success">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:300px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:300px; height:200px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="submit" class="ux-button ux-button-special"><i class="sfi sfi-new-tab"></i>&nbsp;&nbsp; Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", "no-cache", nil)
+				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<form name="new-task-form" method="post" action="msgsend" class="ux-form">` + "\n" + `<div class="operation_success">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:300px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:300px; height:200px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="submit" class="ux-button ux-button-special"><i class="sfi sfi-new-tab"></i>&nbsp;&nbsp; Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
 				return
 			} //end if
 		} else if(r.Method == http.MethodPost) { // POST
@@ -1149,7 +1149,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		log.Println("[NOTICE] °°°°°°° °°°°°°° A New Task was set via HTTP(S) Task Command °°°°°°° by `" + authUsername + "` from IP Address [`" + r.RemoteAddr + "`] :: `<" + customcmd + ">`")
 		//--
-		smarthttputils.HttpStatus202(w, r, srvassets.HtmlServerTemplate("Server: Task Command was Set", "", `<h1>Server: Task Command was Set &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success" title="Command">` + smart.EscapeHtml("<" + customcmd + ">") + `</div>` + "\n" + `<div class="operation_important" title="Data">` + "\n" + `<textarea class="ux-field" style="width:300px; height:200px;" readonly>` + smart.EscapeHtml(customdata) + `</textarea>` + "\n" + `</div>` + "\n" + `<a href="msgsend" class="ux-button">New Task Command</a>`), "index.html", "", -1, "", "no-cache", nil)
+		smarthttputils.HttpStatus202(w, r, srvassets.HtmlServerTemplate("Server: Task Command was Set", "", `<h1>Server: Task Command was Set &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success" title="Command">` + smart.EscapeHtml("<" + customcmd + ">") + `</div>` + "\n" + `<div class="operation_important" title="Data">` + "\n" + `<textarea class="ux-field" style="width:300px; height:200px;" readonly>` + smart.EscapeHtml(customdata) + `</textarea>` + "\n" + `</div>` + "\n" + `<a href="msgsend" class="ux-button">New Task Command</a>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
 		//--
 	} //end function
 
@@ -1161,7 +1161,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		} //end if
 		//--
 		headers := map[string]string{"refresh":"10"}
-		smarthttputils.HttpStatus200(w, r, assets.HtmlStandaloneTemplate("MsgPak Server: HTTP(S)/WsMux", "", `<div class="operation_display">MsgPak Server: HTTP(S)/WsMux # ` + smart.EscapeHtml(VERSION) + `</div>` + `<div class="operation_info"><img width="48" height="48" src="lib/framework/img/loading-spin.svg"></div>` + `<hr>` + `<small>` + smart.EscapeHtml(smart.COPYRIGHT) + `</small>`), "index.html", "", -1, "", "no-cache", headers)
+		smarthttputils.HttpStatus200(w, r, assets.HtmlStandaloneTemplate("MsgPak Server: HTTP(S)/WsMux", "", `<div class="operation_display">MsgPak Server: HTTP(S)/WsMux # ` + smart.EscapeHtml(VERSION) + `</div>` + `<div class="operation_info"><img width="48" height="48" src="lib/framework/img/loading-spin.svg"></div>` + `<hr>` + `<small>` + smart.EscapeHtml(smart.COPYRIGHT) + `</small>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, headers)
 		//--
 	} //end function
 
@@ -1285,7 +1285,7 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 		log.Println("[ERROR] MsgPak Client: Empty Auth Password")
 		return false
 	} //end if
-	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 30)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
+	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 255)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
 		log.Println("[ERROR] MsgPak Client: Invalid Auth UserName Length: must be between 7 and 30 characters")
 		return false
 	} //end if

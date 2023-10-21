@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20230926.1746 :: STABLE
+// r.20231005.1352 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20230926.1746"
+	VERSION string = "r.20231005.1352"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -615,7 +615,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		log.Println("[ERROR] MsgPak Server: Empty Auth Password")
 		return false
 	} //end if
-	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 255)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
+	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 88)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
 		log.Println("[ERROR] MsgPak Server: Invalid Auth UserName Length: must be between 7 and 30 characters")
 		return false
 	} //end if
@@ -1285,7 +1285,7 @@ func MsgPakClientRun(clientID string, serverPool []string, tlsMode string, certi
 		log.Println("[ERROR] MsgPak Client: Empty Auth Password")
 		return false
 	} //end if
-	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 255)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
+	if((len(smart.StrTrimWhitespaces(authPassword)) < 7) || (len(authPassword) > 88)) { // {{{SYNC-GO-SMART-AUTH-PASS-LEN}}}
 		log.Println("[ERROR] MsgPak Client: Invalid Auth UserName Length: must be between 7 and 30 characters")
 		return false
 	} //end if

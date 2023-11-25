@@ -1,0 +1,6 @@
+v1.5.1
+github.com/gorilla/websocket
+
+@require
+    golang.org/x/net
+

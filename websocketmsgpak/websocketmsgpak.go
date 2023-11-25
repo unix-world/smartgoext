@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20231005.1352 :: STABLE
+// r.20231124.2232 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -28,7 +28,7 @@ import (
 	smartcache 		"github.com/unix-world/smartgo/simplecache"
 
 	dhkx 			"github.com/unix-world/smartgo/dhkx"
-	websocket 		"github.com/unix-world/smartgoext/gorilla/websocket"
+	websocket 		"github.com/unix-world/smartgoext/websocket"
 	crontab 		"github.com/unix-world/smartgoext/crontab"
 )
 
@@ -37,7 +37,7 @@ import (
 
 
 const (
-	VERSION string = "r.20231005.1352"
+	VERSION string = "r.20231124.2232"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -917,7 +917,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 
 	srvHandlerMsgPack := func(w http.ResponseWriter, r *http.Request) {
 		//-- check auth
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, false) // outputs: TEXT
+		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, false) // outputs: TEXT
 		if(authErr != "") {
 			log.Println("[WARNING] MessagePak Server / MsgPak Channel Area :: Authentication Failed:", authErr)
 			return
@@ -1094,7 +1094,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			return
 		} //end if
 		//--
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, true) // outputs: HTML
+		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, true) // outputs: HTML
 		if(authErr != "") {
 			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication Failed:", authErr)
 			return

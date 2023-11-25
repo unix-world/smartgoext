@@ -1,4 +1,0 @@
-@head.20220920
-
-req. go 1.14 or later
-

@@ -19,7 +19,7 @@ The basic usage is really simple. Given this struct:
 		"Phone": {"999-999-999"},
 	}
 	person := new(Person)
-	decoder := schema.NewDecoder()
+	decoder := schemaform.NewDecoder()
 	decoder.Decode(person, values)
 
 This is just a simple example and it doesn't make a lot of sense to create
@@ -33,7 +33,7 @@ will be of type url.Values, http.Request.Form, or http.Request.MultipartForm:
 			// Handle error
 		}
 
-		decoder := schema.NewDecoder()
+		decoder := schemaform.NewDecoder()
 		// r.PostForm is a map of our POST form values
 		err := decoder.Decode(person, r.PostForm)
 
@@ -47,15 +47,15 @@ will be of type url.Values, http.Request.Form, or http.Request.MultipartForm:
 Note: it is a good idea to set a Decoder instance as a package global,
 because it caches meta-data about structs, and an instance can be shared safely:
 
-	var decoder = schema.NewDecoder()
+	var decoder = schemaform.NewDecoder()
 
-To define custom names for fields, use a struct tag "schema". To not populate
+To define custom names for fields, use a struct tag "schemaform". To not populate
 certain fields, use a dash for the name and it will be ignored:
 
 	type Person struct {
-		Name  string `schema:"name"`  // custom name
-		Phone string `schema:"phone"` // custom name
-		Admin bool   `schema:"-"`     // this field is never set
+		Name  string `schemaform:"name"`  // custom name
+		Phone string `schemaform:"phone"` // custom name
+		Admin bool   `schemaform:"-"`     // this field is never set
 	}
 
 The supported field types in the destination struct are:
@@ -145,4 +145,4 @@ a converter, like:
 		<input type="email" name="Emails.2">
 	</form>
 */
-package schema
+package schemaform

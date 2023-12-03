@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20231129.0631 :: STABLE
+// r.20231129.2358 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -59,6 +59,7 @@ const (
 	CERTIFICATE_PEM_KEY string = "cert.key"
 
 	HTTP_AUTH_REALM string = "Smart.MsgPak Server"
+	HTTP_GO_LANG_USER_AGENT string = "Go-http-client/1.1"
 )
 
 
@@ -171,15 +172,35 @@ func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string, shar
 		return "", "MsgPak: Command is empty"
 	} //end if
 	//--
-	var dataEnc string = smart.ThreefishEncryptCBC(data, sharedPrivateKey + sharedSecret + ":" + smart.Sha384(cmd), false)
-	sMsg := &messagePack{
-		cmd,
-		dataEnc,
-		smart.Sha512(cmd + "\n" + dataEnc + "\n" + data),
+	polySum, errPoly := smart.Poly1305(smart.Md5(sharedSecret + "\v" + sharedPrivateKey), sharedSecret + "\v" + cmd + "\v" + sharedPrivateKey, true)
+	if(errPoly != nil) {
+		return "", "MsgPak: Poly Checksum Failed: " + errPoly.Error()
+	} //end if
+	//--
+	var dataEnc string = smart.StrTrimWhitespaces(smart.ThreefishEncryptCBC(smart.DataArchive(data), sharedPrivateKey + "\v" + smart.Sh3a512B64(cmd + "\v" + sharedSecret + "\v" + polySum), false))
+	if(dataEnc == "") {
+		return "", "MsgPak: Encrypt Failed: Empty Data"
+	} //end if
+	//--
+	hMac, errHmac := smart.HashHmac("sha3-384", dataEnc + "\v" + cmd, dataEnc + "\v" + data, true)
+	if(errHmac != nil) {
+		return "", "MsgPak: Hmac Checksum Failed: " + errHmac.Error()
+	} //end if
+	//--
+	var sMsg messagePack = messagePack{
+		Cmd: cmd,
+		Data: dataEnc,
+		CheckSum: hMac,
 	}
 	//--
-	dataEnc = smart.DataArchive(smart.JsonNoErrChkEncode(sMsg, false, true))
-	sMsg = nil
+	dataEnc = smart.StrTrimWhitespaces(smart.JsonNoErrChkEncode(sMsg, false, true))
+	if(dataEnc == "") {
+		return "", "MsgPak: JSON Encode Failed: Empty Data"
+	} //end if
+	dataEnc = smart.StrTrimWhitespaces(smart.Base64sEncode(dataEnc))
+	if(dataEnc == "") {
+		return "", "MsgPak: B64sE Failed: Empty Data"
+	} //end if
 	//--
 	var crrLen int = len(dataEnc)
 	if(crrLen > int(MAX_MSG_SIZE)) {
@@ -191,38 +212,59 @@ func msgPakComposeMessage(cmd string, data string, sharedPrivateKey string, shar
 } //END FUNCTION
 
 
-func msgPakParseMessage(msg string, sharedPrivateKey string, sharedSecret string) (msgStruct *messagePack, errMsg string) {
+func msgPakParseMessage(msg string, sharedPrivateKey string, sharedSecret string) (msgStruct messagePack, errMsg string) {
 	//--
 	defer smart.PanicHandler()
 	//--
-	msg = smart.StrTrimWhitespaces(msg)
-	if(msg == "") {
-		return nil, "MsgPak: Message is empty"
-	} //end if
-	//--
-	msg = smart.DataUnArchive(msg)
-	if(msg == "") {
-		return nil, "MsgPak: Message Unarchiving FAILED"
-	} //end if
+	var sMsg messagePack
 	//--
 	msg = smart.StrTrimWhitespaces(msg)
 	if(msg == "") {
-		return nil, "MsgPak: Message is empty after Unarchiving"
+		return sMsg, "MsgPak: Message is empty"
+	} //end if
+	//--
+	msg = smart.StrTrimWhitespaces(smart.Base64sDecode(msg))
+	if(msg == "") {
+		return sMsg, "MsgPak: Message is empty after B64sD"
 	} //end if
 	//--
 	D, DErr := smart.JsonObjDecode(msg)
 	if((DErr != nil) || (D == nil)) {
-		return nil, "MsgPak: Message Decoding FAILED: " + DErr.Error()
+		return sMsg, "MsgPak: Message JSON Decoding Failed: " + DErr.Error()
 	} //end if
 	//--
-	sMsg := &messagePack{
-		D["cmd"].(string),
-		D["data"].(string),
-		D["checksum"].(string),
+	sMsg = messagePack{
+		Cmd: D["cmd"].(string),
+		Data: D["data"].(string),
+		CheckSum: D["checksum"].(string),
 	}
-	sMsg.Data = smart.ThreefishDecryptCBC(sMsg.Data, sharedPrivateKey + sharedSecret + ":" + smart.Sha384(sMsg.Cmd), false)
-	if(sMsg.CheckSum != smart.Sha512(sMsg.Cmd + "\n" + D["data"].(string) + "\n" + sMsg.Data)) {
-		return nil, "MsgPak: Invalid Message Checksum"
+	//--
+	polySum, errPoly := smart.Poly1305(smart.Md5(sharedSecret + "\v" + sharedPrivateKey), sharedSecret + "\v" + sMsg.Cmd + "\v" + sharedPrivateKey, true)
+	if(errPoly != nil) {
+		sMsg = messagePack{} // reset
+		return sMsg, "MsgPak: Poly Checksum Failed: " + errPoly.Error()
+	} //end if
+	//--
+	sMsg.Data = smart.StrTrimWhitespaces(smart.ThreefishDecryptCBC(sMsg.Data, sharedPrivateKey + "\v" + smart.Sh3a512B64(sMsg.Cmd + "\v" + sharedSecret + "\v" + polySum), false))
+	if(sMsg.Data == "") {
+		sMsg = messagePack{} // reset
+		return sMsg, "MsgPak: Decrypt Failed: empty data"
+	} //end if
+	sMsg.Data = smart.DataUnArchive(sMsg.Data)
+	if(sMsg.Data == "") {
+		sMsg = messagePack{} // reset
+		return sMsg, "MsgPak: Unarchive Failed: empty data"
+	} //end if
+	//--
+	hMac, errHmac := smart.HashHmac("sha3-384", D["data"].(string) + "\v" + sMsg.Cmd, D["data"].(string) + "\v" + sMsg.Data, true)
+	if(errHmac != nil) {
+		sMsg = messagePack{} // reset
+		return sMsg, "MsgPak: Hmac Checksum Failed: " + errHmac.Error()
+	} //end if
+	//--
+	if((smart.StrTrimWhitespaces(sMsg.CheckSum) == "") || (sMsg.CheckSum != hMac)) {
+		sMsg = messagePack{} // reset
+		return sMsg, "MsgPak: Invalid Message Checksum"
 	} //end if
 	//--
 	return sMsg, ""
@@ -916,15 +958,30 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 	//--
 
 	srvHandlerMsgPack := func(w http.ResponseWriter, r *http.Request) {
+		//-- safety
+		defer smart.PanicHandler() // for: socket upgrade
 		//-- check auth
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, false) // outputs: TEXT
-		if(authErr != "") {
+		authErr, authData := smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, false) // outputs: TEXT
+		if(authErr != nil) {
 			log.Println("[WARNING] MessagePak Server / MsgPak Channel Area :: Authentication Failed:", authErr)
+			return
+		} //end if
+		if((authData.OK != true) || (authData.UserName == "")) {
+			log.Println("[WARNING] MessagePak Server / MsgPak Channel Area :: Authentication is Invalid")
+			if(DEBUG == true) {
+				log.Println("[DEBUG] AuthData:", authData, r.UserAgent())
+			} //end if
+			return
+		} //end if
+		if(authData.Method != 1) { // Basic Auth Only
+			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication should be Basic [ 1 ] and it is: [", authData.Method, "]")
 			return
 		} //end if
 		//-- upgrade the raw HTTP connection to a websocket based one ; below method must check credentials
 		srvWebSockUpgrader.CheckOrigin = func(r *http.Request) bool {
-			if(authErr != "") {
+		//	if(authData.Realm != HTTP_AUTH_REALM) {
+			var ua string = smart.StrToLower(smart.StrTrimWhitespaces(r.UserAgent()))
+			if((ua == "") || (ua != smart.StrToLower(HTTP_GO_LANG_USER_AGENT))) {
 				return false
 			} //end if
 			return true
@@ -934,6 +991,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		connectedClients.Store(r.RemoteAddr, conn)
 		defer func() {
+			defer smart.PanicHandler() // for: connection close
 			connectedClients.Delete(r.RemoteAddr)
 			connCloseSocket(conn)
 		}()
@@ -1094,9 +1152,20 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 			return
 		} //end if
 		//--
-		var authErr string = smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, true) // outputs: HTML
-		if(authErr != "") {
+		authErr, authData := smarthttputils.HttpBasicAuthCheck(w, r, HTTP_AUTH_REALM, authUsername, authPassword, allowedIPs, nil, true) // outputs: HTML
+		if(authErr != nil) {
 			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication Failed:", authErr)
+			return
+		} //end if
+		if((authData.OK != true) || (authData.UserName == "")) {
+			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication is Invalid")
+			if(DEBUG == true) {
+				log.Println("[DEBUG] AuthData:", authData)
+			} //end if
+			return
+		} //end if
+		if(authData.Method != 1) { // Basic Auth Only
+			log.Println("[WARNING] MessagePak Server / Task Commands Area :: Authentication should be Basic [ 1 ] and it is: [", authData.Method, "]")
 			return
 		} //end if
 		//--

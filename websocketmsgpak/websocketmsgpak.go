@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra / WebSocket Message Pack - Server / Client :: Smart.Go.Framework
 // (c) 2020-2023 unix-world.org
-// r.20231129.2358 :: STABLE
+// r.20231205.2358 :: STABLE
 
 // Req: go 1.16 or later (embed.FS is N/A on Go 1.15 or lower)
 package websocketmsgpak
@@ -21,15 +21,14 @@ import (
 
 	smart 			"github.com/unix-world/smartgo"
 	uid 			"github.com/unix-world/smartgo/uuid"
-	b58 			"github.com/unix-world/smartgo/base58"
 	assets 			"github.com/unix-world/smartgo/web-assets"
 	srvassets 		"github.com/unix-world/smartgo/web-srvassets"
 	smarthttputils 	"github.com/unix-world/smartgo/web-httputils"
 	smartcache 		"github.com/unix-world/smartgo/simplecache"
 
 	dhkx 			"github.com/unix-world/smartgo/dhkx"
+	crontab 		"github.com/unix-world/smartgo/crontab"
 	websocket 		"github.com/unix-world/smartgoext/websocket"
-	crontab 		"github.com/unix-world/smartgoext/crontab"
 )
 
 
@@ -37,7 +36,7 @@ import (
 
 
 const (
-	VERSION string = "r.20231129.0631"
+	VERSION string = "r.20231205.2358"
 
 	DEBUG bool = false
 	DEBUG_CACHE bool = false
@@ -519,7 +518,7 @@ func MsgPakGenerateUUID() string {
 //	log.Println("[NOTICE] MsgPak/UUID Time Seed:", theTime)
 	var uuid string = uid.Uuid1013Str(13) + "-" + uid.Uuid1013Str(10) + "-" + uid.Uuid1013Str(13)
 	if(theTime != "") {
-		uuid += "-" + b58.Encode([]byte(theTime))
+		uuid += "-" + smart.BaseEncode([]byte(theTime), "b58")
 	} //end if
 	//--
 	return uuid
@@ -1172,11 +1171,14 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		var isRequestOk bool = true
 		//--
 		if(r.Method == http.MethodGet) { // GET
-			r.ParseForm()
-			_, hasParamCmd := r.Form["cmd"]
-			_, hasParamData  := r.Form["data"]
-			if((hasParamCmd != true) && (hasParamData != true)) {
-				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<form name="new-task-form" method="post" action="msgsend" class="ux-form">` + "\n" + `<div class="operation_success">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:300px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:300px; height:200px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="submit" class="ux-button ux-button-special"><i class="sfi sfi-new-tab"></i>&nbsp;&nbsp; Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
+			var paramMode string = smart.StrTrimWhitespaces(r.URL.Query().Get("mode"))
+			var paramCmd  string = smart.StrTrimWhitespaces(r.URL.Query().Get("cmd"))
+			var paramData string = smart.StrTrimWhitespaces(r.URL.Query().Get("data"))
+			if((paramMode == "display") && (paramCmd != "")) { // display form
+				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: Task Command Status: Set", "", `<h1>Server: Task Command Status: Set &nbsp; <i class="sfi sfi-tab sfi-3x"></i></h1>` + `<div class="operation_success" title="Command">` + smart.EscapeHtml("<" + paramCmd + ">") + `</div>` + "\n" + `<div class="operation_display icon" title="Data">` + "\n" + `<textarea class="ux-field" style="width:700px; height:250px;" readonly>` + smart.EscapeHtml(paramData) + `</textarea>` + "\n" + `</div>` + "\n" + `<a href="msgsend" class="ux-button ux-button-primary">New Task Command</a>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
+				return
+			} else if(paramCmd == "") { // new form
+				smarthttputils.HttpStatus200(w, r, srvassets.HtmlServerTemplate("Server: New Task Command", "", `<h1>Server: New Task Command &nbsp; <i class="sfi sfi-command sfi-3x"></i></h1>` + `<form id="new-task-form" name="new-task-form" method="post" action="#" class="ux-form" onSubmit="return false;"><input type="hidden" name="mode" value="json">` + "\n" + `<div class="operation_result">` + `<input type="text" name="cmd" class="ux-field" placeholder="Cmd" title="Cmd" maxlength="255" style="width:700px;">` + `</div>` + "\n" + `<div class="operation_important">` + `<textarea name="data" class="ux-field" placeholder="Data" title="Data" maxlength="16000000" style="width:700px; height:250px;"></textarea>` + `</div>` + "\n" + `<button type="submit" disabled style="display:none;" aria-hidden="true" data-hint="Prevent Form Submit on Enter"></button>` + "\n" + `<button type="button" class="ux-button ux-button-special" onClick="smartJ$Browser.SubmitFormByAjax('new-task-form', 'msgsend', 'yes'); return false;"><i class="sfi sfi-new-tab"></i>&nbsp;&nbsp; Submit Task Command</button>` + "\n" + `</form>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
 				return
 			} //end if
 		} else if(r.Method == http.MethodPost) { // POST
@@ -1188,6 +1190,7 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		var customcmd string = r.FormValue("cmd")
 		var customdata string = r.FormValue("data")
+		var askJson bool = (r.FormValue("mode") == "json")
 		if(DEBUG == true) {
 			log.Println("[DEBUG] RequestVars:", "cmd", customcmd, ";", "data", customdata)
 		} //end if
@@ -1210,15 +1213,27 @@ func MsgPakServerRun(serverID string, useTLS bool, certifPath string, httpAddr s
 		//--
 		if(isRequestOk != true) {
 			if(errSetTask == "") {
-				errSetTask = "Command is Invalid Or Disallowed"
+				errSetTask = "Command is Empty, Invalid Or Disallowed"
 			} //end if
-			smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `cmd` : string, `data` : string ] # " + errSetTask, true)
+			if(askJson) {
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(200) // status code must be after content type
+				w.Write([]byte(srvassets.JsonAjaxFormReply("ERROR", "", "Server: Task Command was NOT Set", "Invalid Request # Required Variables:\n[ `cmd` : string, `data` : string ]" + "\n\n" + "ERR: " + errSetTask, false, "", "", "", "", false)))
+			} else {
+				smarthttputils.HttpStatus400(w, r, "Invalid Request # Required Variables: [ `cmd` : string, `data` : string ]" + "\n" + "ERR: " + errSetTask, true)
+			} //end if else
 			return
 		} //end if
 		//--
 		log.Println("[NOTICE] °°°°°°° °°°°°°° A New Task was set via HTTP(S) Task Command °°°°°°° by `" + authUsername + "` from IP Address [`" + r.RemoteAddr + "`] :: `<" + customcmd + ">`")
 		//--
-		smarthttputils.HttpStatus202(w, r, srvassets.HtmlServerTemplate("Server: Task Command was Set", "", `<h1>Server: Task Command was Set &nbsp; <i class="sfi sfi-tab sfi-2x"></i></h1>` + `<div class="operation_success" title="Command">` + smart.EscapeHtml("<" + customcmd + ">") + `</div>` + "\n" + `<div class="operation_important" title="Data">` + "\n" + `<textarea class="ux-field" style="width:300px; height:200px;" readonly>` + smart.EscapeHtml(customdata) + `</textarea>` + "\n" + `</div>` + "\n" + `<a href="msgsend" class="ux-button">New Task Command</a>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
+		if(askJson) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(200) // status code must be after content type
+			w.Write([]byte(srvassets.JsonAjaxFormReply("OK", "", "Server: Task Command was Set", "Command: " + "<" + customcmd + ">" + "\n" + "Data Length: " + smart.ConvertIntToStr(len(customdata)) + " bytes", false, "", "msgsend?mode=display&cmd=" + smart.EscapeUrl(customcmd) + "&data=" + smart.EscapeUrl(smart.TextCutByLimit(customdata, 255)), "", "", false)))
+		} else {
+			smarthttputils.HttpStatus202(w, r, srvassets.HtmlServerTemplate("Server: Task Command was Set", "", `<h1>Server: Task Command was Set &nbsp; <i class="sfi sfi-loop sfi-3x"></i></h1>` + `<div class="operation_success" title="Command">` + smart.EscapeHtml("<" + customcmd + ">") + `</div>` + "\n" + `<div class="operation_display icon" title="Data">` + "\n" + `<textarea class="ux-field" style="width:700px; height:250px;" readonly>` + smart.EscapeHtml(customdata) + `</textarea>` + "\n" + `</div>` + "\n" + `<a href="msgsend" class="ux-button ux-button-info">New Task Command</a>`), "index.html", "", -1, "", smarthttputils.CACHE_CONTROL_NOCACHE, nil)
+		} //end if else
 		//--
 	} //end function
 

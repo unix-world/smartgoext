@@ -1,0 +1,4 @@
+github.com/boombuler/barcode @head.20231212
+
+go 1.17
+

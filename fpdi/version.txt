@@ -1,0 +1,4 @@
+github.com/phpdave11/gofpdi @head.20231222
+
+go 1.12
+

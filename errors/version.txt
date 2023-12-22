@@ -1,0 +1,4 @@
+github.com/pkg/errors @head.20231222
+
+go 1.15
+

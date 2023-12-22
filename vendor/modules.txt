@@ -1,0 +1,5 @@
+# golang.org/x/image v0.14.0
+## explicit; go 1.18
+golang.org/x/image/ccitt
+golang.org/x/image/tiff
+golang.org/x/image/tiff/lzw

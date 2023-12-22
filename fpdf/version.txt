@@ -1,0 +1,5 @@
+github.com/go-pdf/fpdf @head.20231222
+
+go 1.20
+
+contains fixes by unixman (barcode pdf417 replaced and adapted to use the same as the rest of barcodes: github.com/boombuler/barcode)

@@ -1,3 +1,7 @@
+
+// (c) 2023 unix-world.org
+// contains fixes by unixman
+
 // Copyright (c) 2015 Jelmer Snoeck (Gmail: jelmer.snoeck)
 //
 // Permission to use, copy, modify, and distribute this software for any purpose
@@ -207,8 +211,19 @@ func RegisterDataMatrix(pdf barcodePdf, code string) string {
 // inclusive. Barcodes for use with FedEx must set columns to 10 and
 // securityLevel to 5. Use Barcode() with the return value to put the barcode
 // on the page.
-func RegisterPdf417(pdf barcodePdf, code string, columns int, securityLevel int) string {
-	bcode := pdf417.Encode(code, columns, securityLevel)
+//-- re-adapted by unixman r.20231222
+//func RegisterPdf417(pdf barcodePdf, code string, columns int, securityLevel int) string {
+// !! columns were supported just by using a 3rd party repo: ruudk/golang-pdf417
+// !! securityLevel should be between 1 and 9 ; default recommended is 5
+func RegisterPdf417(pdf barcodePdf, code string, securityLevel uint8) string {
+	//-- fix by unixman
+//	bcode := pdf417.Encode(code, columns, securityLevel)
+	//--
+	bcode, err := pdf417.Encode(code, byte(securityLevel))
+	if(err != nil) {
+		return ""
+	}
+	//-- #end fix
 	return registerBarcode(pdf, bcode, nil)
 }
 

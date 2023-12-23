@@ -1,4 +1,4 @@
-github.com/pkg/errors @head.20231222
+github.com/pkg/errors @head.20231223
 
 go 1.15
 

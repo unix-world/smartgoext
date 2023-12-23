@@ -1,6 +1,6 @@
 
 // (c) 2023 unix-world.org
-// contains fixes by unixman
+// contains fixes by unixman, r.20231223.0217
 
 // Copyright (c) 2015 Jelmer Snoeck (Gmail: jelmer.snoeck)
 //
@@ -24,7 +24,7 @@ package barcode
 import (
 	"bytes"
 	"errors"
-	"image/jpeg"
+	"image/png"
 	"io"
 	"strconv"
 	"sync"
@@ -64,7 +64,7 @@ type barcodePdf interface {
 
 // printBarcode internally prints the scaled or unscaled barcode to the PDF. Used by both
 // Barcode() and BarcodeUnscalable().
-func printBarcode(pdf barcodePdf, code string, x, y float64, w, h *float64, flow bool) {
+func printBarcode(pdf barcodePdf, code string, x, y float64, w float64, h float64, flow bool) {
 	barcodes.Lock()
 	unscaled, ok := barcodes.cache[code]
 	barcodes.Unlock()
@@ -102,14 +102,14 @@ func printBarcode(pdf barcodePdf, code string, x, y float64, w, h *float64, flow
 	scaleToWidthF := float64(scaleToWidth)
 	scaleToHeightF := float64(scaleToHeight)
 
-	if w != nil {
-		scaleToWidthF = *w
+	if w > 0 {
+		scaleToWidthF = w
 	}
-	if h != nil {
-		scaleToHeightF = *h
+	if h > 0 {
+		scaleToHeightF = h
 	}
 
-	pdf.Image(bname, x, y, scaleToWidthF, scaleToHeightF, flow, "jpg", 0, "")
+	pdf.Image(bname, x, y, scaleToWidthF, scaleToHeightF, flow, "png", 0, "")
 
 }
 
@@ -118,7 +118,7 @@ func printBarcode(pdf barcodePdf, code string, x, y float64, w, h *float64, flow
 // Its arguments work in the same way as that of Barcode(). However, it allows for an unscaled
 // barcode in the width and/or height dimensions. This can be useful if you want to prevent
 // side effects of upscaling.
-func BarcodeUnscalable(pdf barcodePdf, code string, x, y float64, w, h *float64, flow bool) {
+func BarcodeUnscalable(pdf barcodePdf, code string, x, y float64, w float64, h float64, flow bool) {
 	printBarcode(pdf, code, x, y, w, h, flow)
 }
 
@@ -128,8 +128,8 @@ func BarcodeUnscalable(pdf barcodePdf, code string, x, y float64, w, h *float64,
 // If width or height are left unspecfied, the barcode is not scaled in the unspecified dimensions.
 //
 // Positioning with x, y and flow is inherited from Fpdf.Image().
-func Barcode(pdf barcodePdf, code string, x, y, w, h float64, flow bool) {
-	printBarcode(pdf, code, x, y, &w, &h, flow)
+func Barcode(pdf barcodePdf, code string, x, y, w float64, h float64, flow bool) {
+	printBarcode(pdf, code, x, y, w, h, flow)
 }
 
 // GetUnscaledBarcodeDimensions returns the width and height of the
@@ -211,7 +211,7 @@ func RegisterDataMatrix(pdf barcodePdf, code string) string {
 // inclusive. Barcodes for use with FedEx must set columns to 10 and
 // securityLevel to 5. Use Barcode() with the return value to put the barcode
 // on the page.
-//-- re-adapted by unixman r.20231222
+//-- re-adapted by unixman
 //func RegisterPdf417(pdf barcodePdf, code string, columns int, securityLevel int) string {
 // !! columns were supported just by using a 3rd party repo: ruudk/golang-pdf417
 // !! securityLevel should be between 1 and 9 ; default recommended is 5
@@ -289,14 +289,15 @@ func barcodeKey(bcode barcode.Barcode) string {
 // add the barcode to the page.
 func registerScaledBarcode(pdf barcodePdf, code string, bcode barcode.Barcode) error {
 	buf := new(bytes.Buffer)
-	err := jpeg.Encode(buf, bcode, &jpeg.Options{Quality: 100})
+	enc := png.Encoder{CompressionLevel: png.BestCompression}
+	err := enc.Encode(buf, bcode)
 
 	if err != nil {
 		return err
 	}
 
 	reader := bytes.NewReader(buf.Bytes())
-	pdf.RegisterImageReader(code, "jpg", reader)
+	pdf.RegisterImageReader(code, "png", reader)
 
 	return nil
 }

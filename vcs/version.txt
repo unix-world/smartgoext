@@ -1,0 +1,4 @@
+github.com/Masterminds/vcs @head.20231224
+
+go 1.17
+

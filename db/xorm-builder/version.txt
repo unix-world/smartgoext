@@ -1,0 +1,4 @@
+module xorm.io/builder @v0.3.13
+
+go 1.11
+

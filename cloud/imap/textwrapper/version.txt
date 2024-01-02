@@ -1,0 +1,4 @@
+github.com/emersion/go-textwrapper @head.20240101
+
+go 1.16
+

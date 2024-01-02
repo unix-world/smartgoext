@@ -1,0 +1,6 @@
+v1.7.2
+github.com/gorilla/csrf
+
+@require
+	github.com/gorilla/securecookie
+

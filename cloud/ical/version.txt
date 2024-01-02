@@ -1,0 +1,7 @@
+github.com/emersion/go-ical @head.20231213
+
+go 1.13
+
+require:
+    github.com/teambition/rrule-go
+

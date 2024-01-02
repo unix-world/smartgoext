@@ -1,0 +1,4 @@
+github.com/trimmer-io/go-xmp @head.20231228
+
+go 1.17
+

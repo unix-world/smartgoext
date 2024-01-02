@@ -1,0 +1,10 @@
+
+@head.20240101
+
+github.com/go-gl/gl/2.1
+github.com/go-gl/glfw/3.2
+gitlab.com/vbsw/shaders
+
+go 1.13
+
+

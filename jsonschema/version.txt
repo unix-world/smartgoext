@@ -1,4 +1,0 @@
-github.com/santhosh-tekuri/jsonschema/v5 @head.20231213
-
-go 1.19
-

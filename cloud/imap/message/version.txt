@@ -1,0 +1,8 @@
+github.com/emersion/go-message @head.20240101
+
+go 1.14
+
+require:
+	github.com/emersion/go-textwrapper
+	golang.org/x/text
+

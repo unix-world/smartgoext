@@ -1,0 +1,53 @@
+package ical_test
+
+import (
+	"bytes"
+	"io"
+	"log"
+	"time"
+
+	"github.com/unix-world/smartgo/cloud/ical"
+)
+
+func ExampleDecoder() {
+	// Let's assume r is an io.Reader containing iCal data
+	var r io.Reader
+
+	dec := ical.NewDecoder(r)
+	for {
+		cal, err := dec.Decode()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, event := range cal.Events() {
+			summary, err := event.Props.Text(ical.PropSummary)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Found event: %v", summary)
+		}
+	}
+}
+
+func ExampleEncoder() {
+	event := ical.NewEvent()
+	event.Props.SetText(ical.PropUID, "uid@example.org")
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now())
+	event.Props.SetText(ical.PropSummary, "My awesome event")
+	event.Props.SetDateTime(ical.PropDateTimeStart, time.Now().Add(24*time.Hour))
+
+	cal := ical.NewCalendar()
+	cal.Props.SetText(ical.PropVersion, "2.0")
+	cal.Props.SetText(ical.PropProductID, "-//xyz Corp//NONSGML PDA Calendar Version 1.0//EN")
+	cal.Children = append(cal.Children, event.Component)
+
+	var buf bytes.Buffer
+	if err := ical.NewEncoder(&buf).Encode(cal); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Print(buf.String())
+}

@@ -1,0 +1,12 @@
+github.com/emersion/go-imap/v2 @head.20240101
+
+go 1.18
+
+require:
+	github.com/emersion/go-message
+	github.com/emersion/go-sasl
+	github.com/emersion/go-textwrapper // indirect
+	golang.org/x/text
+
+unixman fix: the above packages are includded
+

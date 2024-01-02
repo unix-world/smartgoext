@@ -1,0 +1,4 @@
+github.com/teambition/rrule-go @head.20231213
+
+go 1.16
+

@@ -1,0 +1,17 @@
+
+# extract the signed info part
+xmllint --exc-c14n xmldsign.xml | sed 's+<SignedInfo>+<SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">+' | awk '/<SignedInfo/,/<\/SignedInfo>/' | sed 's/.*<SignedInfo/<SignedInfo/' | sed 's/<\/SignedInfo>.*/<\/SignedInfo>/' | xmllint --exc-c14n - | openssl dgst -sha256
+
+# extract public certificate to: cert.pub
+awk '/<X509Certificate>/,/<\/X509Certificate>/' xmldsign.xml | sed 's/.*<X509Certificate>//' | sed 's/<\/X509Certificate>.*$//' | awk 'BEGIN {print "-----BEGIN CERTIFICATE-----"} END {print "-----END CERTIFICATE-----"} {print}' | fold -b -w 66 | openssl x509 -noout -pubkey > cert.pub
+
+# print signature
+awk '/<X509Certificate>/,/<\/X509Certificate>/' xmldsign.xml | sed 's/.*<X509Certificate>//' | sed 's/<\/X509Certificate>.*$//' | awk 'BEGIN {print "-----BEGIN CERTIFICATE-----"} END {print "-----END CERTIFICATE-----"} {print}' | fold -b -w 66 | openssl x509 -text -nameopt multiline
+
+# extract signature to: signature.sig
+awk '/<SignatureValue>/,/<\/SignatureValue>/' xmldsign.xml | sed 's/.*<SignatureValue>//' | sed 's/<\/SignatureValue>.*$//' | tr -d '\n' | openssl enc -d -a -A -out signature.sig
+
+# Verify the electronic signature cryptographically and extract the message digest in the same time from the electronic signature
+openssl rsautl -verify -inkey cert.pub -in signature.sig -pubin -asn1parse
+openssl rsautl -verify -inkey cert.pub -in signature.sig -pubin -asn1parse | grep '-' | cut -b14-60 | tr '-' ' ' | xxd -r -p | xxd -p -c256
+

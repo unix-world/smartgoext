@@ -1,0 +1,7 @@
+github.com/emersion/go-smtp @head.20240101
+
+go 1.13
+
+require:
+	github.com/emersion/go-sasl
+

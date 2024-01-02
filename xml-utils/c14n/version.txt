@@ -1,0 +1,9 @@
+v.20231229
+
+go 1.19
+
+based on:
+    github.com/russellhaering/goxmldsig @head.20231228 [ subset: canonicalize only ]
+
+rework: by unixman
+

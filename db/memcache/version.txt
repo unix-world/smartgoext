@@ -1,0 +1,4 @@
+github.com/bradfitz/gomemcache @head.20240103
+
+go 1.18
+

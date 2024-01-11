@@ -5061,7 +5061,7 @@ func (f *Fpdf) puticc() {
 		return
 	}
 	iccData, errIccRead := smart.SafePathFileRead(f.iccFile, false)
-	if(errIccRead != "") {
+	if(errIccRead != nil) {
 		f.isFatalErr = true
 		log.Println("[ERROR]", smart.CurrentFunctionName(), "Failed to Read the ICC Profile:", f.iccFile, "Reason:", errIccRead)
 		return

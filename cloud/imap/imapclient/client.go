@@ -22,6 +22,7 @@ package imapclient
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -317,7 +318,7 @@ func (c *Client) Close() error {
 	c.mutex.Unlock()
 
 	// Ignore net.ErrClosed here, because we also call conn.Close in c.read
-	if err := c.conn.Close(); err != nil && err != net.ErrClosed {
+	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 		return err
 	}
 
@@ -518,7 +519,8 @@ func (c *Client) read() {
 
 	c.setReadTimeout(idleReadTimeout)
 	for {
-		if c.dec.EOF() {
+		// Ignore net.ErrClosed here, because we also call conn.Close in c.Close
+		if c.dec.EOF() || errors.Is(c.dec.Err(), net.ErrClosed) {
 			break
 		}
 		if err := c.readResponse(); err != nil {
@@ -653,7 +655,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			if !c.dec.ExpectSP() {
 				return nil, c.dec.Err()
 			}
-			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 			if err != nil {
 				return nil, fmt.Errorf("in resp-code-copy: %v", err)
 			}
@@ -782,7 +784,7 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 				if err != nil {
 					return fmt.Errorf("in resp-code-copy: %v", err)
 				}
@@ -973,11 +975,14 @@ func (c *Client) Unsubscribe(mailbox string) *Command {
 	return cmd
 }
 
-func uidCmdName(name string, uid bool) string {
-	if uid {
-		return "UID " + name
-	} else {
+func uidCmdName(name string, kind imapwire.NumKind) string {
+	switch kind {
+	case imapwire.NumKindSeq:
 		return name
+	case imapwire.NumKindUID:
+		return "UID " + name
+	default:
+		panic("imapclient: invalid imapwire.NumKind")
 	}
 }
 

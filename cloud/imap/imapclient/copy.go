@@ -1,28 +1,19 @@
 package imapclient
 
 import (
+	"fmt"
+
 	"github.com/unix-world/smartgoext/cloud/imap"
 	"github.com/unix-world/smartgoext/cloud/imap/internal/imapwire"
 )
 
-func (c *Client) copy(uid bool, seqSet imap.NumSet, mailbox string) *CopyCommand {
+// Copy sends a COPY command.
+func (c *Client) Copy(numSet imap.NumSet, mailbox string) *CopyCommand {
 	cmd := &CopyCommand{}
-	enc := c.beginCommand(uidCmdName("COPY", uid), cmd)
-	enc.SP().NumSet(seqSet).SP().Mailbox(mailbox)
+	enc := c.beginCommand(uidCmdName("COPY", imapwire.NumSetKind(numSet)), cmd)
+	enc.SP().NumSet(numSet).SP().Mailbox(mailbox)
 	enc.end()
 	return cmd
-}
-
-// Copy sends a COPY command.
-func (c *Client) Copy(seqSet imap.NumSet, mailbox string) *CopyCommand {
-	return c.copy(false, seqSet, mailbox)
-}
-
-// UIDCopy sends a UID COPY command.
-//
-// See Copy.
-func (c *Client) UIDCopy(seqSet imap.NumSet, mailbox string) *CopyCommand {
-	return c.copy(true, seqSet, mailbox)
 }
 
 // CopyCommand is a COPY command.
@@ -35,9 +26,12 @@ func (cmd *CopyCommand) Wait() (*imap.CopyData, error) {
 	return &cmd.data, cmd.cmd.Wait()
 }
 
-func readRespCodeCopy(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.NumSet, err error) {
-	if !dec.ExpectNumber(&uidValidity) || !dec.ExpectSP() || !dec.ExpectNumSet(&srcUIDs) || !dec.ExpectSP() || !dec.ExpectNumSet(&dstUIDs) {
-		return 0, imap.NumSet{}, imap.NumSet{}, dec.Err()
+func readRespCodeCopyUID(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.UIDSet, err error) {
+	if !dec.ExpectNumber(&uidValidity) || !dec.ExpectSP() || !dec.ExpectUIDSet(&srcUIDs) || !dec.ExpectSP() || !dec.ExpectUIDSet(&dstUIDs) {
+		return 0, nil, nil, dec.Err()
+	}
+	if srcUIDs.Dynamic() || dstUIDs.Dynamic() {
+		return 0, nil, nil, fmt.Errorf("imapclient: server returned dynamic number set in COPYUID response")
 	}
 	return uidValidity, srcUIDs, dstUIDs, nil
 }

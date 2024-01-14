@@ -1,0 +1,11 @@
+github.com/emersion/go-msgauth @head.20240114
+
+go 1.18
+
+require
+	github.com/emersion/go-message
+
+# modified by unixman:
+    * removed cmd which requires extra dependencies
+    * change dependency of ed25519 from x to go base
+

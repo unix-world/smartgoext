@@ -4,12 +4,21 @@ import (
 	"fmt"
 
 	"github.com/unix-world/smartgoext/cloud/imap"
+	"github.com/unix-world/smartgoext/cloud/imap/internal/imapwire"
 )
 
-func (c *Client) store(uid bool, seqSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
-	cmd := &FetchCommand{msgs: make(chan *FetchMessageData, 128)}
-	enc := c.beginCommand(uidCmdName("STORE", uid), cmd)
-	enc.SP().NumSet(seqSet).SP()
+// Store sends a STORE command.
+//
+// Unless StoreFlags.Silent is set, the server will return the updated values.
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Store(numSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
+	cmd := &FetchCommand{
+		numSet: numSet,
+		msgs:   make(chan *FetchMessageData, 128),
+	}
+	enc := c.beginCommand(uidCmdName("STORE", imapwire.NumSetKind(numSet)), cmd)
+	enc.SP().NumSet(numSet).SP()
 	if options != nil && options.UnchangedSince != 0 {
 		enc.Special('(').Atom("UNCHANGEDSINCE").SP().ModSeq(options.UnchangedSince).Special(')').SP()
 	}
@@ -32,20 +41,4 @@ func (c *Client) store(uid bool, seqSet imap.NumSet, store *imap.StoreFlags, opt
 	})
 	enc.end()
 	return cmd
-}
-
-// Store sends a STORE command.
-//
-// Unless StoreFlags.Silent is set, the server will return the updated values.
-//
-// A nil options pointer is equivalent to a zero options value.
-func (c *Client) Store(seqSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
-	return c.store(false, seqSet, store, options)
-}
-
-// UIDStore sends a UID STORE command.
-//
-// See Store.
-func (c *Client) UIDStore(seqSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
-	return c.store(true, seqSet, store, options)
 }

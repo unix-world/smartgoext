@@ -1,4 +1,4 @@
-v.20240114
+v.20240604
 Go 1.18 or later
 
-golang.org/x/image v0.15.0
+golang.org/x/image v0.16.0

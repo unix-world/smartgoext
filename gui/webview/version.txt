@@ -1,1 +1,10 @@
 @head.20200216
+
+Go 1.13 or later
+
+github.com/zserge/webview
+
+# refactored by unixman as:
+github.com/unix-world/smartgoext/webview
+
+fixes: r.20240928.0102

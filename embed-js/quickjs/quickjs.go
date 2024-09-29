@@ -24,8 +24,8 @@ import (
 #cgo openbsd LDFLAGS: -L/usr/local/lib/quickjs -lquickjs -lm
 #cgo linux CFLAGS: -I/opt/quickjs/include
 #cgo linux LDFLAGS: -L/opt/quickjs/lib -lquickjs -lm -ldl
-#cgo darwin CFLAGS: -I./quickjs/include
-#cgo darwin LDFLAGS: -L${SRCDIR}/quickjs/lib/linux/x86_64 -lquickjs
+#cgo darwin CFLAGS: -I/opt/homebrew/include/quickjs
+#cgo darwin LDFLAGS: -L/opt/homebrew/lib/quickjs -lquickjs
 
 #include <stdlib.h>
 #include <string.h>

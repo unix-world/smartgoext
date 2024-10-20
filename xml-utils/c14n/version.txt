@@ -1,9 +1,9 @@
-v.20231229
+v.20241020
 
-go 1.19
+go 1.21
 
 based on:
-    github.com/russellhaering/goxmldsig @head.20231228 [ subset: canonicalize only ]
+    github.com/russellhaering/goxmldsig @head.20240212 [ subset: canonicalize only ]
 
 rework: by unixman
 

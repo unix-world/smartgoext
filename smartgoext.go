@@ -1,15 +1,15 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2020-2024 unix-world.org
-// r.20240930.1958 :: STABLE
+// r.20241020.2358 :: STABLE
 
-// REQUIRE: go 1.19 or later
+// REQUIRE: go 1.22 or later
 package smartgoext
 
 //-----
 
 const (
-	VERSION string = "v.20240930.1958"
+	VERSION string = "v.20241020.2358"
 	NAME string = "SmartGoExt"
 )
 

@@ -1,5 +1,6 @@
 
-// (c) 2023 unix-world.org
+// r.20241020
+// (c) 2023-2024 unix-world.org
 
 // ex: signature
 // [B64...]
@@ -23,12 +24,17 @@ import (
 
 func CheckRSASignature(algo x509.SignatureAlgorithm, certificatePEM string, signatureB64 string, data string) (bool, error) {
 
-	// ex: algo: x509.SHA256WithRSA
+	// ex: algo: x509.SHA1WithRSA
+
+	defer smart.PanicHandler()
 
 	certificatePEM = smart.StrTrimWhitespaces(certificatePEM)
 	if(certificatePEM == "") {
 		return false, nil
 	}
+
+	signatureB64 = smart.StrNormalizeSpaces(signatureB64)
+	signatureB64 = smart.StrReplaceAll(signatureB64, " ", "")
 	signatureB64 = smart.StrTrimWhitespaces(signatureB64)
 	if(signatureB64 == "") {
 		return false, nil
@@ -41,7 +47,10 @@ func CheckRSASignature(algo x509.SignatureAlgorithm, certificatePEM string, sign
 		return false, errParse
 	}
 
-	signature := smart.Base64Decode(smart.StrTrimWhitespaces(signatureB64))
+	signature := smart.Base64Decode(signatureB64)
+	if(smart.StrTrimWhitespaces(signature) == "") {
+		return false, smart.NewError("Signature is Empty after Base64Decode")
+	}
 
 	errVfy := cert.CheckSignature(algo, []byte(data), []byte(signature))
 	if(errVfy != nil) {
@@ -53,20 +62,27 @@ func CheckRSASignature(algo x509.SignatureAlgorithm, certificatePEM string, sign
 }
 
 
-func VerifyRSASignature(algo crypto.Hash, certificatePEM string, signatureB64 string, hashB64 string, modePKCS1 bool, optionsPSS *rsa.PSSOptions) (bool, error) {
+func VerifyRSASignature(algo crypto.Hash, certificatePEM string, signatureB64 string, digestB64 string, modePKCS1 bool, optionsPSS *rsa.PSSOptions) (bool, error) {
 
-	// ex: algo: crypto.SHA256
+	// ex: algo: crypto.SHA1
+	// and the hash must be Sha1B64(data)
+
+	defer smart.PanicHandler()
 
 	certificatePEM = smart.StrTrimWhitespaces(certificatePEM)
 	if(certificatePEM == "") {
 		return false, nil
 	}
+
+	signatureB64 = smart.StrNormalizeSpaces(signatureB64)
+	signatureB64 = smart.StrReplaceAll(signatureB64, " ", "")
 	signatureB64 = smart.StrTrimWhitespaces(signatureB64)
 	if(signatureB64 == "") {
 		return false, nil
 	}
-	hashB64 = smart.StrTrimWhitespaces(hashB64)
-	if(hashB64 == "") {
+
+	digestB64 = smart.StrTrimWhitespaces(digestB64)
+	if(digestB64 == "") {
 		return false, nil
 	}
 
@@ -76,21 +92,31 @@ func VerifyRSASignature(algo crypto.Hash, certificatePEM string, signatureB64 st
 	if(errParse != nil) {
 		return false, errParse
 	}
-
 	rsaPublicKey := cert.PublicKey.(*rsa.PublicKey)
+	/*
 	pubKey := rsa.PublicKey{
 		N: rsaPublicKey.N,
 		E: rsaPublicKey.E,
 	}
+	*/
 
 	signature := smart.Base64Decode(signatureB64)
-	hashed := smart.Base64Decode(hashB64)
+	if(smart.StrTrimWhitespaces(signature) == "") {
+		return false, smart.NewError("Signature is Empty after Base64Decode")
+	}
+
+	digest := smart.Base64Decode(digestB64)
+	if(smart.StrTrimWhitespaces(digest) == "") {
+		return false, smart.NewError("Hash is Empty after Base64Decode")
+	}
 
 	var errVfy error
 	if(modePKCS1 == true) {
-		errVfy = rsa.VerifyPKCS1v15(&pubKey, algo, []byte(hashed), []byte(signature))
+	//	errVfy = rsa.VerifyPKCS1v15(&pubKey, algo, []byte(digest), []byte(signature))
+		errVfy = rsa.VerifyPKCS1v15(rsaPublicKey, algo, []byte(digest), []byte(signature))
 	} else {
-		errVfy = rsa.VerifyPSS(&pubKey, algo, []byte(hashed), []byte(signature), optionsPSS)
+	//	errVfy = rsa.VerifyPSS(&pubKey, algo, []byte(digest), []byte(signature), optionsPSS)
+		errVfy = rsa.VerifyPSS(rsaPublicKey, algo, []byte(digest), []byte(signature), optionsPSS)
 	}
 	if(errVfy != nil) {
 		return false, errVfy
@@ -100,3 +126,4 @@ func VerifyRSASignature(algo crypto.Hash, certificatePEM string, signatureB64 st
 
 }
 
+// #END

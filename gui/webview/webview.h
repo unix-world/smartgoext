@@ -375,11 +375,8 @@ WEBVIEW_API int webview_init(struct webview *w) {
 
   gtk_widget_show_all(w->priv.window);
 
-  webkit_web_view_run_javascript(
-      WEBKIT_WEB_VIEW(w->priv.webview),
-      "window.external={invoke:function(x){"
-      "window.webkit.messageHandlers.external.postMessage(x);}}",
-      NULL, NULL, NULL);
+//webkit_web_view_run_javascript(WEBKIT_WEB_VIEW(w->priv.webview), "window.external={invoke:function(x){window.webkit.messageHandlers.external.postMessage(x);}}", NULL, NULL, NULL); // deprecated
+  webkit_web_view_evaluate_javascript(WEBKIT_WEB_VIEW(w->priv.webview), "window.external={invoke:function(x){window.webkit.messageHandlers.external.postMessage(x);}}", 92, NULL, NULL, NULL, NULL, NULL);
 
   g_signal_connect(G_OBJECT(w->priv.window), "destroy",
                    G_CALLBACK(webview_destroy_cb), w);
@@ -477,8 +474,8 @@ WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
     g_main_context_iteration(NULL, TRUE);
   }
   w->priv.js_busy = 1;
-  webkit_web_view_run_javascript(WEBKIT_WEB_VIEW(w->priv.webview), js, NULL,
-                                 webview_eval_finished, w);
+//webkit_web_view_run_javascript(WEBKIT_WEB_VIEW(w->priv.webview), js, NULL, webview_eval_finished, w); // deprecated
+  webkit_web_view_evaluate_javascript(WEBKIT_WEB_VIEW(w->priv.webview), js, strlen(js), NULL, NULL, NULL, webview_eval_finished, w);
   while (w->priv.js_busy) {
     g_main_context_iteration(NULL, TRUE);
   }

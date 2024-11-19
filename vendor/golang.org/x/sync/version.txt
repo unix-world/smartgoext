@@ -1,0 +1,4 @@
+v.20240819
+Go 1.18 or later
+
+golang.org/x/sync/syncmap v0.8.0

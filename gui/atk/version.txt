@@ -1,0 +1,11 @@
+github.com/visualfc/atk @head.20240102
+
+go 1.14
+
+require
+    golang.org/x/sync
+
+includes fixes by unixman: r.20240102.2114
+    * fix linux build flags to pickup tk 8.6 on Debian
+    * add build flags for OpenBSD
+

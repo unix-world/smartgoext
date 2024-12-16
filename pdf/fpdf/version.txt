@@ -1,8 +1,8 @@
-v.20240102.2114
+v.20241215.2358
 go 1.20 or later
 
 based on:
-	github.com/go-pdf/fpdf @head.20231222
+	github.com/go-pdf/fpdf @head.20241001
 
 modified by unixman:
     * barcode pdf417 replaced and adapted to use the same as the rest of barcodes: github.com/boombuler/barcode

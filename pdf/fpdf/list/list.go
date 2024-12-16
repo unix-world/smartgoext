@@ -1,3 +1,8 @@
+
+// v.20241215.1258
+// (c) unix-world.org
+// license: BSD
+
 package main
 
 import (

@@ -1,2 +1,2 @@
-v1.1.2
+v1.1.2 @head.20241215
 github.com/gorilla/securecookie

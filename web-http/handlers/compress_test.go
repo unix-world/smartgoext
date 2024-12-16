@@ -175,7 +175,7 @@ func TestCompressHandlerGzipDeflate(t *testing.T) {
 // to use a real http server to trigger the net/http sendfile special
 // case.
 func TestCompressFile(t *testing.T) {
-	dir, err := os.MkdirTemp("", "smartgoext_compress")
+	dir, err := os.MkdirTemp("", "gorilla_compress")
 	if err != nil {
 		t.Fatal(err)
 	}

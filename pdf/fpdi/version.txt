@@ -1,4 +1,9 @@
-github.com/phpdave11/gofpdi @head.20231222
+github.com/phpdave11/gofpdi @head.20241215
+
+refactored by unixman as:
+    github.com/unix-world/smartgoext/pdf/fpdi
+replaced pkg/errors with:
+    github.com/unix-world/smartgoext/errors
 
 go 1.12
 

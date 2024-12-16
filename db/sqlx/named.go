@@ -1,5 +1,7 @@
 package sqlx
 
+// fixes by unixman
+
 // Named Query Support
 //
 //  * BindMap - bind query bindvars to map/struct args
@@ -174,7 +176,10 @@ func bindArgs(names []string, arg interface{}, m *reflectx.Mapper) ([]interface{
 	arglist := make([]interface{}, 0, len(names))
 
 	// grab the indirected value of arg
-	v := reflect.ValueOf(arg)
+	//-- unixman: fix from upstream
+//	v := reflect.ValueOf(arg)
+	var v reflect.Value
+	//-- #
 	for v = reflect.ValueOf(arg); v.Kind() == reflect.Ptr; {
 		v = v.Elem()
 	}

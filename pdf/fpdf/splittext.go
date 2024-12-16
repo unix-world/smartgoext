@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20231228
+// v.20241215.1258
 // (c) unix-world.org
 // license: BSD
 
@@ -30,9 +30,17 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 	i := 0
 	j := 0
 	l := 0
+
 	for i < nb {
 		c := s[i]
-		l += cw[c]
+
+		if int(c) >= len(cw) {
+			// Decimal representation of c is greater than the font width's array size so it can't be used as index.
+			l += cw[f.currentFont.Desc.MissingWidth]
+		} else {
+			l += cw[c]
+		}
+
 		if unicode.IsSpace(c) || isChinese(c) {
 			sep = i
 		}

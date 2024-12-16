@@ -1,5 +1,9 @@
 package main
 
+// v.20241215.1258
+// (c) unix-world.org
+// license: BSD
+
 // This command demonstrates the use of ghotscript to reduce the size
 // of generated PDFs. This is based on a comment made by farkerhaiku:
 // https://github.com/phpdave11/gofpdf/issues/57#issuecomment-185843315

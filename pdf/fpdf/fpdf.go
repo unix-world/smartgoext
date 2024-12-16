@@ -20,7 +20,9 @@
 
 package fpdf
 
-// v.20231230.1258
+// contains fixes by unixman
+
+// v.20241215.1258
 // (c) unix-world.org
 // license: BSD
 
@@ -78,6 +80,7 @@ func (b *fmtBuffer) printf(fmtStr string, args ...interface{}) {
 
 func fpdfNew(orientationStr, unitStr, sizeStr, fontDirStr string, size SizeType) (f *Fpdf) {
 	f = new(Fpdf)
+	orientationStr = smart.StrTrimWhitespaces(orientationStr)
 	if orientationStr == "" {
 		orientationStr = "p"
 	} else {
@@ -162,6 +165,7 @@ func fpdfNew(orientationStr, unitStr, sizeStr, fontDirStr string, size SizeType)
 	f.stdPageSizes["a4"] = SizeType{595.28, 841.89}
 	f.stdPageSizes["a5"] = SizeType{420.94, 595.28}
 	f.stdPageSizes["a6"] = SizeType{297.64, 420.94}
+	f.stdPageSizes["a7"] = SizeType{209.76, 297.64}
 	f.stdPageSizes["a2"] = SizeType{1190.55, 1683.78}
 	f.stdPageSizes["a1"] = SizeType{1683.78, 2383.94}
 	f.stdPageSizes["letter"] = SizeType{612, 792}
@@ -257,8 +261,8 @@ func NewCustom(init *InitType) (f *Fpdf) {
 // point, "mm" for millimeter, "cm" for centimeter, or "in" for inch. An empty
 // string will be replaced with "mm".
 //
-// sizeStr specifies the page size. Acceptable values are "A3", "A4", "A5",
-// "Letter", "Legal", or "Tabloid". An empty string will be replaced with "A4".
+// sizeStr specifies the page size. Acceptable values are "A1", "A2", "A3", "A4", "A5",
+// "A6", "A7", "Letter", "Legal", or "Tabloid". An empty string will be replaced with "A4".
 //
 // fontDirStr specifies the file system location in which font resources will
 // be found. An empty string is replaced with ".". This argument only needs to
@@ -1249,6 +1253,7 @@ func (f *Fpdf) RoundedRect(x, y, w, h, r float64, corners string, stylestr strin
 func (f *Fpdf) RoundedRectExt(x, y, w, h, rTL, rTR, rBR, rBL float64, stylestr string) {
 	f.roundedRectPath(x, y, w, h, rTL, rTR, rBR, rBL)
 	f.out(fillDrawOp(stylestr))
+	f.out("Q")
 }
 
 // Circle draws a circle centered on point (x, y) with radius r.
@@ -2517,6 +2522,7 @@ func (f *Fpdf) Text(x, y float64, txtStr string) {
 // SetWordSpacing sets spacing between words of following text. See the
 // WriteAligned() example for a demonstration of its use.
 func (f *Fpdf) SetWordSpacing(space float64) {
+	f.ws = space
 	f.out(sprintf("%.5f Tw", space*f.k))
 }
 
@@ -3538,7 +3544,7 @@ func (f *Fpdf) RegisterImageOptions(fileStr string, options ImageOptions) (info 
 	// First use of this image, get info
 	if options.ImageType == "" {
 	//	pos := strings.LastIndex(fileStr, ".")
-		pos := smart.StrRPos(fileStr, ".")
+		pos := smart.StrRPos(fileStr, ".", false) // unicode mode, non-binary
 		if pos < 0 {
 			f.err = fmt.Errorf("image file has no extension and no type was specified: %s", fileStr)
 			return
@@ -4628,7 +4634,7 @@ func implode(sep string, arr []int) string {
 	var s fmtBuffer
 	for i := 0; i < len(arr)-1; i++ {
 		s.printf("%v", arr[i])
-		s.printf(sep)
+		s.printf("%s", sep)
 	}
 	if len(arr) > 0 {
 		s.printf("%v", arr[len(arr)-1])
@@ -5286,7 +5292,7 @@ func (f *Fpdf) ClosePath() {
 //
 // The MoveTo() example demonstrates this method.
 func (f *Fpdf) DrawPath(styleStr string) {
-	f.outf(fillDrawOp(styleStr))
+	f.outf("%s", fillDrawOp(styleStr))
 }
 
 // ArcTo draws an elliptical arc centered at point (x, y). rx and ry specify its

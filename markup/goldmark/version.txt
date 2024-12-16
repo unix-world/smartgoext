@@ -1,0 +1,12 @@
+github.com/yuin/goldmark
+version: v1.7.8
+
+github.com/bowman2001/goldmark-supersubscript
+version v0.1.0 @head.20241130
+optional extension for goldmark
+
+modified by unixman:
+	* refactored as: `github.com/unix-world/smartgoext/markup/goldmark` # r.20241215.2358
+	* integrates subscript/superscript extension
+	* html escape fixes
+	* added attributes for images, links and tables

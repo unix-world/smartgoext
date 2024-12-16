@@ -1,5 +1,9 @@
-v1.2.2
+v1.4.0 @head.20241215
 github.com/gorilla/sessions
 
 @require
     github.com/gorilla/securecookie
+
+fix by unixman:
+	* disable cookie Partitioned (available only since go 1.23)
+

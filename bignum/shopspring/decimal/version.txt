@@ -1,4 +1,5 @@
 github.com/shopspring/decimal
+v.1.4.0 @ head.20241215
 
 go 1.13
 

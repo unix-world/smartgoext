@@ -14,6 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// v.20241215.1258
+// (c) unix-world.org
+// license: BSD
+
 // Package tiff allows standard (LZW-compressed) TIFF images to be used in
 // documents generated with gofpdf.
 package tiff

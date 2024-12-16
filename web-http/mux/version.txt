@@ -1,2 +1,2 @@
-v1.8.1
+v1.8.1.1 @head.20241215
 github.com/gorilla/mux

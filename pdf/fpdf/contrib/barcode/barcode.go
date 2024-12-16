@@ -1,7 +1,7 @@
 
-// contains fixes by unixman, r.20231223.0217
+// contains fixes by unixman
 
-// v.20231228
+// v.20241215.1258
 // (c) unix-world.org
 // license: BSD
 

@@ -24,8 +24,14 @@ type Route struct {
 	// Error resulted from building a route.
 	err error
 
+	// The meta data associated with this route
+	metadata map[any]any
+
 	// "global" reference to all named routes
 	namedRoutes map[string]*Route
+
+	// route specific middleware
+	middlewares []middleware
 
 	// config possibly passed in from `Router`
 	routeConf
@@ -53,6 +59,19 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 				continue
 			}
 
+			// Multiple routes may share the same path but use different HTTP methods. For instance:
+			// Route 1: POST "/users/{id}".
+			// Route 2: GET "/users/{id}", parameters: "id": "[0-9]+".
+			//
+			// The router must handle these cases correctly. For a GET request to "/users/abc" with "id" as "-2",
+			// The router should return a "Not Found" error as no route fully matches this request.
+			if rr, ok := m.(*routeRegexp); ok {
+				if rr.regexpType == regexpTypeQuery {
+					matchErr = ErrNotFound
+					break
+				}
+			}
+
 			// Ignore ErrNotFound errors. These errors arise from match call
 			// to Subrouters.
 			//
@@ -66,16 +85,6 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 
 			matchErr = nil // nolint:ineffassign
 			return false
-		} else {
-			// Multiple routes may share the same path but use different HTTP methods. For instance:
-			// Route 1: POST "/users/{id}".
-			// Route 2: GET "/users/{id}", parameters: "id": "[0-9]+".
-			//
-			// The router must handle these cases correctly. For a GET request to "/users/abc" with "id" as "-2",
-			// The router should return a "Not Found" error as no route fully matches this request.
-			if match.MatchErr == ErrMethodMismatch {
-				match.MatchErr = nil
-			}
 		}
 	}
 
@@ -84,7 +93,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		return false
 	}
 
-	if match.MatchErr == ErrMethodMismatch && r.handler != nil {
+	if match.MatchErr != nil && r.handler != nil {
 		// We found a route which matches request method, clear MatchErr
 		match.MatchErr = nil
 		// Then override the mis-matched handler
@@ -96,10 +105,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		match.Route = r
 	}
 	if match.Handler == nil {
-		match.Handler = r.handler
-	}
-	if match.Vars == nil {
-		match.Vars = make(map[string]string)
+		match.Handler = r.GetHandlerWithMiddlewares()
 	}
 
 	// Set variables.
@@ -122,6 +128,49 @@ func (r *Route) BuildOnly() *Route {
 	return r
 }
 
+// MetaData -------------------------------------------------------------------
+
+// Metadata is used to set metadata on a route
+func (r *Route) Metadata(key any, value any) *Route {
+	if r.metadata == nil {
+		r.metadata = make(map[any]any)
+	}
+
+	r.metadata[key] = value
+	return r
+}
+
+// GetMetadata returns the metadata map for route
+func (r *Route) GetMetadata() map[any]any {
+	return r.metadata
+}
+
+// MetadataContains returns whether or not the key is present in the metadata map
+func (r *Route) MetadataContains(key any) bool {
+	_, ok := r.metadata[key]
+	return ok
+}
+
+// GetMetadataValue returns the value of a specific key in the metadata map. If the key is not present in the map mux.ErrMetadataKeyNotFound is returned
+func (r *Route) GetMetadataValue(key any) (any, error) {
+	value, ok := r.metadata[key]
+	if !ok {
+		return nil, ErrMetadataKeyNotFound
+	}
+
+	return value, nil
+}
+
+// GetMetadataValueOr returns the value of a specific key in the metadata map. If the key is not present in the metadata the fallback value is returned
+func (r *Route) GetMetadataValueOr(key any, fallbackValue any) any {
+	value, ok := r.metadata[key]
+	if !ok {
+		return fallbackValue
+	}
+
+	return value
+}
+
 // Handler --------------------------------------------------------------------
 
 // Handler sets a handler for the route.
@@ -140,6 +189,20 @@ func (r *Route) HandlerFunc(f func(http.ResponseWriter, *http.Request)) *Route {
 // GetHandler returns the handler for the route, if any.
 func (r *Route) GetHandler() http.Handler {
 	return r.handler
+}
+
+// GetHandlerWithMiddleware returns the route handler wrapped in the assigned middlewares.
+// If no middlewares are specified, just the handler, if any, is returned.
+func (r *Route) GetHandlerWithMiddlewares() http.Handler {
+	handler := r.handler
+
+	if handler != nil && len(r.middlewares) > 0 {
+		for i := len(r.middlewares) - 1; i >= 0; i-- {
+			handler = r.middlewares[i].Middleware(handler)
+		}
+	}
+
+	return handler
 }
 
 // Name -----------------------------------------------------------------------
@@ -442,7 +505,7 @@ func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // It accepts a sequence of schemes to be matched, e.g.: "http", "https".
 // If the request's URL has a scheme set, it will be matched against.
 // Generally, the URL scheme will only be set if a previous handler set it,
-// such as the ProxyHeaders handler from handlers package.
+// such as the ProxyHeaders handler from gorilla / handlers.
 // If unset, the scheme will be determined based on the request's TLS
 // termination state.
 // The first argument to Schemes will be used when constructing a route URL.

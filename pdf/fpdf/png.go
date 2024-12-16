@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20231228
+// v.20241215.1258
 // (c) unix-world.org
 // license: BSD
 
@@ -116,7 +116,7 @@ func (f *Fpdf) parsepngstream(r *rbuffer, readdpi bool) (info *ImageInfoType) {
 			case 2:
 				trns = []int{int(t[1]), int(t[3]), int(t[5])} // array(ord(substr($t,1,1)), ord(substr($t,3,1)), ord(substr($t,5,1)));
 			default:
-				pos := smart.StrPos(string(t), "\x00")
+				pos := smart.StrPos(string(t), "\x00", true) // use binary mode
 				if pos >= 0 {
 					trns = []int{pos} // array($pos);
 				}

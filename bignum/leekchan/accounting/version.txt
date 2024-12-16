@@ -1,0 +1,5 @@
+github.com/leekchan/accounting
+@head.20241215
+
+go 1.13
+

@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2021-present unix-world.org
-// r.20241216.2358 :: STABLE
+// r.20241221.2358 :: STABLE
 
 // REQUIRE: go 1.22 or later
 package smartgoext
@@ -13,7 +13,7 @@ import (
 //-----
 
 const (
-	VERSION string = "v.20241216.2358"
+	VERSION string = "v.20241221.2358"
 	NAME string = "SmartGoExt"
 )
 

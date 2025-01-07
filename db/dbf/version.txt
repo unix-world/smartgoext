@@ -1,0 +1,7 @@
+github.com/Bowbaq/dbf @head.20241230
+
+go 1.15
+
+require:
+	github.com/pkg/errors
+

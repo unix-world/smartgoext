@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2021-present unix-world.org
-// r.20250107.2358 :: STABLE
+// r.20250118.2358 :: STABLE
 // [ MARKUP ]
 
 // REQUIRE: go 1.22 or later
@@ -32,7 +32,7 @@ func MarkdownGfToHTMLRender(mkdwDoc string) (string, error) {
 	if(mkdwDoc == "") {
 		return "<!-- Markdown:empty -->", nil
 	} //end if
-	if(uint64(len(mkdwDoc)) > smart.MAX_DOC_SIZE_MARKDOWN) {
+	if(uint64(len(mkdwDoc)) > smart.MAX_DOC_SIZE_MARKDOWN) { // {{{SYNC-MARKDOWN-MAX-SIZE}}}
 		return "<!-- Markdown:oversized -->", nil
 	} //end if
 	//-- goldmark
@@ -108,7 +108,7 @@ func SafePathMarkdownGfFileToHTMLRender(mdFilePath string, allowAbsolutePath boo
 	if(errSize != nil) {
 		return "", errSize
 	} //end if
-	if(uint64(fileSize) > smart.MAX_DOC_SIZE_MARKDOWN) {
+	if(uint64(fileSize) > smart.MAX_DOC_SIZE_MARKDOWN) { // {{{SYNC-MARKDOWN-MAX-SIZE}}}
 		return "<!-- # Markdown.Err:4 -->", smart.NewError("Markdown File # OverSized # `" + mdFilePath + "`")
 	} //end if
 	//--

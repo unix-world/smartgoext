@@ -1,0 +1,6 @@
+github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 # head.20250212
+
+go 1.17
+
+refactored by unixman to integrate with smartgo/crypto instead of golang.org/x
+

@@ -1,0 +1,8 @@
+github.com/klauspost/compress v1.16.7 @head.20250212
+
+go 1.16
+
+refactored by unixman as smartgoext/db/mongo-driver/pkg/klauspost/compress
+removed asm files
+replaced internal/snapref with golang/snappy + extra method
+

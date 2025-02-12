@@ -1,0 +1,9 @@
+based on:
+go.mozilla.org/pkcs7 		@head.20250208 v0.9.0
+github.com/digitorus/pkcs7 	@head.20250208
+
+go 1.13
+
+version maintained by unixman
+r.20250208.2358
+

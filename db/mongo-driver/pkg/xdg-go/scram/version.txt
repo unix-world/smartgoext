@@ -1,0 +1,7 @@
+github.com/xdg-go/scram v1.1.2 @head.20250212
+
+go 1.11
+
+refactored by unixman as smartgoext/db/mongo-driver/pkg/xdg-go/scram
+replaced: github.com/xdg-go/pbkdf2 with github.com/unix-world/smartgo/crypto/pbkdf2
+

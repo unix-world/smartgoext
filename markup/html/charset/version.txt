@@ -1,0 +1,4 @@
+v.20250207
+Go 1.18 or later
+
+golang.org/x/net/html/charset v0.34.0

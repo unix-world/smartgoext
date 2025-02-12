@@ -1,0 +1,6 @@
+github.com/montanaflynn/stats v0.7.1 @head.20250212
+
+go 1.13
+
+refactored by unixman as smartgoext/db/mongo-driver/pkg/montanaflynn/stats
+

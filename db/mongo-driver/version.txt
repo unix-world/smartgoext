@@ -1,0 +1,13 @@
+go.mongodb.org/mongo-driver v1.17.2 @20250212
+
+go 1.18
+
+refactored as smartgoext/db/mongo-driver
+
+steps:
+go mod init mongo
+go mod tidy
+go mod vendor
+replace youmark/pkcs8 with smartgoext/crypto/pkcs8
+refactor vendor/github.com/* as pkg/*
+

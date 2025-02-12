@@ -1,8 +1,82 @@
-# golang.org/x/image v0.23.0
+# github.com/unix-world/smartgo v0.0.0-20250212184551-3b57f95ff1a9
+## explicit; go 1.22
+github.com/unix-world/smartgo
+github.com/unix-world/smartgo/baseconv
+github.com/unix-world/smartgo/baseconv/base32
+github.com/unix-world/smartgo/baseconv/base36
+github.com/unix-world/smartgo/baseconv/base58
+github.com/unix-world/smartgo/baseconv/base62
+github.com/unix-world/smartgo/baseconv/base85
+github.com/unix-world/smartgo/baseconv/base92
+github.com/unix-world/smartgo/compress/snappy
+github.com/unix-world/smartgo/crypto/argon2
+github.com/unix-world/smartgo/crypto/bcrypt
+github.com/unix-world/smartgo/crypto/bcrypt-pbkdf
+github.com/unix-world/smartgo/crypto/blake2b
+github.com/unix-world/smartgo/crypto/blowfish
+github.com/unix-world/smartgo/crypto/open-ssh
+github.com/unix-world/smartgo/crypto/pbkdf2
+github.com/unix-world/smartgo/crypto/poly1305
+github.com/unix-world/smartgo/crypto/scrypt
+github.com/unix-world/smartgo/crypto/sha3
+github.com/unix-world/smartgo/crypto/signify
+github.com/unix-world/smartgo/crypto/threefish
+github.com/unix-world/smartgo/crypto/twofish
+github.com/unix-world/smartgo/crypto/uuid
+github.com/unix-world/smartgo/data-structs/fastjson
+github.com/unix-world/smartgo/data-structs/fastjson/fastfloat
+github.com/unix-world/smartgo/data-structs/parseini
+github.com/unix-world/smartgo/data-structs/tidwall/gjson
+github.com/unix-world/smartgo/data-structs/tidwall/match
+github.com/unix-world/smartgo/data-structs/tidwall/pretty
+github.com/unix-world/smartgo/data-structs/tidwall/x2j
+github.com/unix-world/smartgo/data-structs/yaml
+github.com/unix-world/smartgo/markup/html
+github.com/unix-world/smartgo/markup/html/atom
+github.com/unix-world/smartgo/markup/htmlsanitizer
+github.com/unix-world/smartgo/markup/markdown
+github.com/unix-world/smartgo/markup/markdown/ast
+github.com/unix-world/smartgo/markup/markdown/html
+github.com/unix-world/smartgo/markup/markdown/parser
+github.com/unix-world/smartgo/textproc/intl-norm
+github.com/unix-world/smartgo/textproc/regexp2
+github.com/unix-world/smartgo/textproc/regexp2/syntax
+github.com/unix-world/smartgo/ui/colorstring
+github.com/unix-world/smartgo/utils/log-utils
+github.com/unix-world/smartgo/utils/mail
+# golang.org/x/crypto v0.33.0
+## explicit; go 1.20
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/ocsp
+# golang.org/x/image v0.24.0
 ## explicit; go 1.18
 golang.org/x/image/ccitt
 golang.org/x/image/tiff
 golang.org/x/image/tiff/lzw
-# golang.org/x/sync v0.10.0
+# golang.org/x/sync v0.11.0
 ## explicit; go 1.18
+golang.org/x/sync/errgroup
+golang.org/x/sync/singleflight
 golang.org/x/sync/syncmap
+# golang.org/x/text v0.22.0
+## explicit; go 1.18
+golang.org/x/text/encoding
+golang.org/x/text/encoding/charmap
+golang.org/x/text/encoding/htmlindex
+golang.org/x/text/encoding/ianaindex
+golang.org/x/text/encoding/internal
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/encoding/japanese
+golang.org/x/text/encoding/korean
+golang.org/x/text/encoding/simplifiedchinese
+golang.org/x/text/encoding/traditionalchinese
+golang.org/x/text/encoding/unicode
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/tag
+golang.org/x/text/internal/utf8internal
+golang.org/x/text/language
+golang.org/x/text/runes
+golang.org/x/text/transform
+golang.org/x/text/unicode/norm

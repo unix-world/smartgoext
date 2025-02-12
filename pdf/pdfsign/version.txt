@@ -1,0 +1,16 @@
+github.com/digitorus/pdfsign @head.20250106
+
+github.com/unix-world/go-pdfsign @head.20250203
+
+go 1.22
+
+require:
+	github.com/digitorus/pdf v0.1.2
+	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
+	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
+	github.com/mattetti/filebuffer v1.0.1
+	golang.org/x/crypto
+	golang.org/x/text
+
+contains fixes by unixman, r.20250208
+    * default algo set to SHA384

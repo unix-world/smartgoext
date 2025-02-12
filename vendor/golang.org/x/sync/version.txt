@@ -1,4 +1,4 @@
-v.20250105
+v.20250207
 Go 1.18 or later
 
-golang.org/x/sync/syncmap v0.10.0
+golang.org/x/sync/syncmap v0.11.0

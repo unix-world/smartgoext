@@ -1,0 +1,8 @@
+github.com/256dpi/lungo @head.20250211
+
+go 1.22
+
+require
+	github.com/unix-world/smartgoext
+	github.com/unix-world/smartgo
+

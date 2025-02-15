@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2020-present unix-world.org
-// r.20250208.2358 :: STABLE
+// r.20250214.2358 :: STABLE
 // [ XML ]
 
 // REQUIRE: go 1.19 or later

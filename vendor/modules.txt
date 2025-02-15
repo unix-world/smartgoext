@@ -26,6 +26,7 @@ github.com/unix-world/smartgo/crypto/uuid
 github.com/unix-world/smartgo/data-structs/fastjson
 github.com/unix-world/smartgo/data-structs/fastjson/fastfloat
 github.com/unix-world/smartgo/data-structs/parseini
+github.com/unix-world/smartgo/data-structs/tidwall/btree
 github.com/unix-world/smartgo/data-structs/tidwall/gjson
 github.com/unix-world/smartgo/data-structs/tidwall/match
 github.com/unix-world/smartgo/data-structs/tidwall/pretty

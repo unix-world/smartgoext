@@ -2,16 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20241215.1258
-// (c) unix-world.org
+// v.20250226.2358
+// (c) 2023-present unix-world.org
 // license: BSD
 
 package fpdf
 
 import (
+//	"log"
+	"fmt"
+
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 //	"strings"
 
 	smart "github.com/unix-world/smartgo"
@@ -29,8 +31,10 @@ type Attachment struct {
 	// Filename is the displayed name of the attachment
 	Filename string
 
-	// Mime Type for PDF/A compliance
+	//-- Mime Type for PDF/A compliance ; by unixman
 	MimeType string
+	MarkAF uint8
+	//-- #
 
 	// Description is only displayed when using AddAttachmentAnnotation(),
 	// and might be modified by the pdf reader.
@@ -63,8 +67,10 @@ func (f *Fpdf) writeCompressedFileObject(content []byte, mimeType string) { // e
 	} //end if
 	mimeType = f.escapeSmarter(mimeType) // ex: application#2Foctet-stream
 	mimeType = smart.StrToLower(mimeType) // conformance
+
+	mod := timeOrNow(f.modDate)
 //	f.outf("<< /Type /EmbeddedFile /Length %d /Filter /FlateDecode /Params << /CheckSum <%s> /Size %d >> >>\n", lenCompressed, sum, lenUncompressed)
-	f.outf("<< /Type /EmbeddedFile /Subtype /%s /Length %d /Filter /FlateDecode /Params << /CheckSum <%s> /Size %d >> >>\n", mimeType, lenCompressed, sum, lenUncompressed) // fix by unixman to comply with PDF/A standards
+	f.outf("<< /Type /EmbeddedFile /Subtype /%s /Length %d /Filter /FlateDecode /Params << /ModDate %s /CheckSum <%s> /Size %d >> >>", mimeType, lenCompressed, f.textstring("D:"+mod.Format("20060102150405")), sum, lenUncompressed) // fix by unixman to comply with PDF/A standards
 	//--
 	f.putstream(compressed)
 	f.out("endobj")
@@ -82,7 +88,24 @@ func (f *Fpdf) embed(a *Attachment) {
 	f.newobj()
 	//-- unixman: possible values for AFRelationship: Source, Data, Alternative, Supplement, and Unspecified
 //	f.outf("<< /Type /Filespec /F () /UF %s /EF << /F %d 0 R >> /Desc %s\n>>", f.textstring(utf8toutf16(a.Filename)), streamID, f.textstring(utf8toutf16(a.Description)))
-	f.outf("<< /Type /Filespec /F %s /UF %s /AFRelationship /Data /EF << /F %d 0 R >> /Desc %s\n>>", f.textstring(a.Filename), f.textstring(utf8toutf16(a.Filename)), streamID, f.textstring(utf8toutf16(a.Description)))
+	var afRelatedStr string = "/Unspecified"
+	switch(a.MarkAF) {
+		case 1:
+			afRelatedStr = "/Source"
+			break
+		case 2:
+			afRelatedStr = "/Data"
+			break
+		case 3:
+			afRelatedStr = "/Alternative"
+			break
+		case 4:
+			afRelatedStr = "/Supplement"
+			break
+		default: // unspecified, unknown, unused
+			// future use: EncryptedPayload, FormData, Schema
+	}
+	f.outf("<< /Type /Filespec /F %s /UF %s /AFRelationship " + afRelatedStr + " /EF << /F %d 0 R >> /Desc %s\n>>", f.textstring(a.Filename), f.textstring(utf8toutf16(a.Filename)), streamID, f.textstring(utf8toutf16(a.Description)))
 	//--
 	f.out("endobj")
 	a.objectNumber = f.n
@@ -112,11 +135,29 @@ func (f *Fpdf) putAttachments() {
 func (f Fpdf) getEmbeddedFiles() string {
 	names := make([]string, len(f.attachments))
 	for i, as := range f.attachments {
-		names[i] = fmt.Sprintf("(Attachement%d) %d 0 R ", i+1, as.objectNumber)
+	//	names[i] = fmt.Sprintf("(Attachement%d) %d 0 R", i+1, as.objectNumber)
+		names[i] = fmt.Sprintf("%s %d 0 R", f.textstring(as.Filename), as.objectNumber) // fix by unixman, better compliancy
 	}
-	nameTree := fmt.Sprintf("<< /Names [\n %s \n] >>", smart.Implode("\n", names))
-	return nameTree
+//	nameTree := fmt.Sprintf("<< /Names [\n%s\n] >>", smart.Implode("\n", names))
+	nameTree := fmt.Sprintf("<< /Names [%s] >>", smart.StrTrimWhitespaces(smart.Implode(" ", names))) // unixman
+	return smart.StrTrimWhitespaces(nameTree)
 }
+
+//-- by unixman, PDF/A
+// return /AFEntry
+func (f Fpdf) getAFEntries() string {
+	var afEntry = ""
+	for _, as := range f.attachments {
+	//	if(afEntry == "") { // only get the 1st one
+	//		if(as.MarkAF > 0) {
+				afEntry += fmt.Sprintf("%d 0 R", as.objectNumber) + " " // fix by unixman, better compliancy
+	//			break
+	//		}
+	//	} //end if
+	}
+	return smart.StrTrimWhitespaces(afEntry)
+}
+//-- #
 
 // ---------------------------------- Annotations ----------------------------------
 

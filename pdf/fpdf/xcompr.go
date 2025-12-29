@@ -32,7 +32,8 @@ func (pool *xmempool) compress(data []byte) *membuffer {
 	buf.Grow(len(data))
 
 //	zw, err := zlib.NewWriterLevel(buf, zlib.BestSpeed)
-	zw, err := zlib.NewWriterLevel(buf, zlib.DefaultCompression) // unixman
+//	zw, err := zlib.NewWriterLevel(buf, zlib.DefaultCompression) // unixman
+	zw, err := zlib.NewWriterLevel(buf, zlib.BestCompression) // unixman
 	if err != nil {
 		panic(fmt.Errorf("could not create zlib writer: %w", err))
 	}

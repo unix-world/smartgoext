@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20241215.1258
-// (c) unix-world.org
+// v.20250723.2358
+// (c) 2023-present unix-world.org
 // license: BSD
 
 /*
@@ -39,7 +39,7 @@ import (
 
 // Version of FPDF from which this package is derived
 const (
-	cnFpdfVersion = "1.7.1.20231226"
+	cnFpdfVersion = "1.7.1.20250226"
 )
 
 type blendModeType struct {
@@ -568,6 +568,11 @@ type PageBox struct {
 	PointType
 }
 
+type IccData struct {
+	FName    string  // ex: file.icc
+	FContent []byte  // file content
+}
+
 // Fpdf is the principal structure for creating a single PDF document
 type Fpdf struct {
 	isCurrentUTF8    bool                       // is current font used in utf-8 mode
@@ -667,14 +672,16 @@ type Fpdf struct {
 	layer            layerRecType               // manages optional layers in document
 	catalogSort      bool                       // sort resource catalogs in document
 	isFatalErr       bool                       // Fatal Error Semaphore (unixman)
-	iccFile          string                     // Embed ICC Profile, relative file path (unixman)
+	fPage            int                        // First Page Profile Number (unixman)
+	iccData          *IccData                   // Embed ICC Profile (unixman)
 	nIcc             int                        // ICC Color Profile number (unixman)
+	nOI              int                        // Output Intents Profile number (unixman)
 	nXmp             int                        // MetaInfo object number (unixman)
+	compressXMP      bool                       // If set to TRUE will Compress XMP
 	nJs              int                        // JavaScript object number
 	javascript       *string                    // JavaScript code to include in the PDF
 	colorFlag        bool                       // indicates whether fill and text colors are different
-	color            struct {
-		// Composite values of colors
+	color            struct {                   // Composite values of colors
 		draw, fill, text colorType
 	}
 	spotColorMap           map[string]spotColorType // Map of named ink-based colors

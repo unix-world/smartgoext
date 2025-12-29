@@ -2,11 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20241215.1258
+// v.20251203.2358
 // (c) unix-world.org
 // license: BSD
 
 package fpdf
+
+// contains fixes by unixman
 
 import (
 	"math"
@@ -38,7 +40,15 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 			// Decimal representation of c is greater than the font width's array size so it can't be used as index.
 			l += cw[f.currentFont.Desc.MissingWidth]
 		} else {
-			l += cw[c]
+			//-- fix from upstream: codeberg.org/go-pdf/fpdf/commit/b2ebef0
+		//	l += cw[c]
+			//--
+			if int(c) >= len(cw) { // Decimal representation of c is greater than the font width's array size so it can't be used as index.
+				l += cw[f.currentFont.Desc.MissingWidth]
+			} else {
+				l += cw[c]
+			}
+			//--
 		}
 
 		if unicode.IsSpace(c) || isChinese(c) {

@@ -49,6 +49,12 @@ func (context *SignContext) writeTrailer() error {
 		if _, err := context.OutputBuffer.Write([]byte(trailer_string)); err != nil {
 			return err
 		}
+	//-- fix from upstream 681997c6802fcdde86339a92b0f0a6b1c65446d7: Fix PDF 1.7 with XRef Stream causes panic
+	} else if context.PDFReader.XrefInformation.Type == "stream" {
+		if _, err := context.OutputBuffer.Write([]byte("startxref\n")); err != nil {
+			return err
+		}
+	//-- #
 	}
 
 	// Write the new xref start position.

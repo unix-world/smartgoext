@@ -2,9 +2,14 @@ package sign
 
 import (
 	"fmt"
-	"bytes"
-	"strings"
+	"log"
+
 	"strconv"
+	"bytes"
+	"io"
+
+//	"github.com/digitorus/pdf"
+	"github.com/unix-world/smartgoext/pdf/pdfsign/pkg/digitorus/pdf"
 )
 
 func (context *SignContext) createCatalog() ([]byte, error) {
@@ -30,54 +35,18 @@ func (context *SignContext) createCatalog() ([]byte, error) {
 	// catalog_buffer.WriteString(" /Version /2.0")
 	// }
 
-	// Retrieve the root and check for necessary keys in one loop
+	// Retrieve the root, its pointer and set the root string
 	root := context.PDFReader.Trailer().Key("Root")
 	rootPtr := root.GetPtr()
 	context.CatalogData.RootString = strconv.Itoa(int(rootPtr.GetID())) + " " + strconv.Itoa(int(rootPtr.GetGen())) + " R"
 
-	foundPages, foundNames := false, false
+	// Copy over existing catalog entries except for type and AcroForum
 	for _, key := range root.Keys() {
-		switch key {
-		case "Pages":
-			foundPages = true
-		case "Names":
-			foundNames = true
+		if key != "Type" && key != "AcroForm" {
+			_, _ = fmt.Fprintf(&catalog_buffer, "  /%s ", key)
+			context.serializeCatalogEntry(&catalog_buffer, rootPtr.GetID(), root.Key(key))
+			catalog_buffer.WriteString("\n")
 		}
-		if foundPages && foundNames {
-			break
-		}
-	}
-
-	// Add Pages and Names references if they exist
-	if foundPages {
-		pages := root.Key("Pages").GetPtr()
-		catalog_buffer.WriteString("  /Pages " + strconv.Itoa(int(pages.GetID())) + " " + strconv.Itoa(int(pages.GetGen())) + " R\n")
-	}
-	if foundNames {
-		//-- fix by unixman: attachments not shown after sign ; needs full name definition not only reference
-	//	names := root.Key("Names").GetPtr()
-	//	catalog_buffer.WriteString("  /Names " + strconv.Itoa(int(names.GetID())) + " " + strconv.Itoa(int(names.GetGen())) + " R\n")
-		//--
-		namesObj := root.Key("Names")
-		var names string = fmt.Sprintf("%s", namesObj)
-		arr := strings.Split(names, `"`)
-		if(len(arr) > 0) {
-			names = ""
-			var isOpenParanthesis bool = false
-			for i:=0; i<len(arr); i++ { // replace `"Attachment"` with `(Attachment)`
-				names += arr[i]
-				if(i < (len(arr) - 1)) {
-					if(isOpenParanthesis) {
-						names += ")"
-					} else {
-						names += "("
-					}
-					isOpenParanthesis = !isOpenParanthesis
-				}
-			}
-		}
-		catalog_buffer.WriteString("  /Names " + names + "\n")
-		//-- #fix
 	}
 
 	// Start the AcroForm dictionary with /NeedAppearances
@@ -146,4 +115,56 @@ func (context *SignContext) createCatalog() ([]byte, error) {
 	catalog_buffer.WriteString(">>\n")   // Close Catalog
 
 	return catalog_buffer.Bytes(), nil
+}
+
+// serializeCatalogEntry takes a pdf.Value and serializes it to the given writer.
+func (context *SignContext) serializeCatalogEntry(w io.Writer, rootObjId uint32, value pdf.Value) {
+	if ptr := value.GetPtr(); ptr.GetID() != rootObjId {
+		// Indirect object
+		_, _ = fmt.Fprintf(w, "%d %d R", ptr.GetID(), ptr.GetGen())
+		return
+	}
+
+	// Direct object
+	switch value.Kind() {
+	case pdf.String:
+		_, _ = fmt.Fprintf(w, "(%s)", value.RawString())
+	case pdf.Null:
+		_, _ = fmt.Fprint(w, "null")
+	case pdf.Bool:
+		if value.Bool() {
+			_, _ = fmt.Fprint(w, "true")
+		} else {
+			_, _ = fmt.Fprint(w, "false")
+		}
+	case pdf.Integer:
+		_, _ = fmt.Fprintf(w, "%d", value.Int64())
+	case pdf.Real:
+	//	_, _ = fmt.Fprintf(w, "%f", value.Float64())
+		_, _ = fmt.Fprintf(w, "%s", strconv.FormatFloat(value.Float64(), 'f', -1, 64)) // fix by unixman, discard trailing zeroes
+	case pdf.Name:
+		_, _ = fmt.Fprintf(w, "/%s", value.Name())
+	case pdf.Dict:
+		_, _ = fmt.Fprint(w, "<<")
+		for idx, key := range value.Keys() {
+			if idx > 0 {
+				_, _ = fmt.Fprint(w, " ") // Space between items
+			}
+			_, _ = fmt.Fprintf(w, "/%s ", key)
+			context.serializeCatalogEntry(w, rootObjId, value.Key(key))
+		}
+		_, _ = fmt.Fprint(w, ">>")
+	case pdf.Array:
+		_, _ = fmt.Fprint(w, "[")
+		for idx := range value.Len() {
+			if idx > 0 {
+				_, _ = fmt.Fprint(w, " ") // Space between items
+			}
+			context.serializeCatalogEntry(w, rootObjId, value.Index(idx))
+		}
+		_, _ = fmt.Fprint(w, "]")
+	case pdf.Stream:
+	//	panic("stream cannot be a direct object")
+		log.Println("[ERROR]", "PDFSign.pdfcatalog.serializeCatalogEntry", "stream cannot be a direct object") // unixman
+	}
 }

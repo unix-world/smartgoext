@@ -1,4 +1,4 @@
-github.com/emersion/go-vcard @head.20231213
+github.com/emersion/go-vcard @head.20251229
 
 go 1.13
 

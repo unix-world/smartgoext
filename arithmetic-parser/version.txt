@@ -1,0 +1,4 @@
+github.com/bediger4000/arithmetic-parser
+@head.20251229
+
+go 1.17

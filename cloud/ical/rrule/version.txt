@@ -1,4 +1,4 @@
-github.com/teambition/rrule-go @head.20231213
+github.com/teambition/rrule-go @head.20251229
 
 go 1.16
 

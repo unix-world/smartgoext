@@ -1,7 +1,10 @@
-github.com/boombuler/barcode @head.20241215
+github.com/boombuler/barcode @head.20250224
 
 go 1.17
 
 refactored as:
 	github.com/unix-world/smartgoext/pdf/barcode
+
+contains some minor fixes by unixman:
+	* aztec color fix
 

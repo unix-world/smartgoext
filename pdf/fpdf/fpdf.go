@@ -22,8 +22,8 @@ package fpdf
 
 // contains fixes by unixman
 
-// v.20241215.1258
-// (c) unix-world.org
+// v.20251203.2358
+// (c) 2023-present unix-world.org
 // license: BSD
 
 // Version: 1.7
@@ -97,8 +97,10 @@ func fpdfNew(orientationStr, unitStr, sizeStr, fontDirStr string, size SizeType)
 	}
 	f.page = 0
 	f.n = 2
-	f.nXmp = 0
-	f.nIcc = 0
+	f.fPage = 0 // unixman: fix broken link to 1st page
+	f.nXmp = 0 // XMP Data
+	f.nIcc = 0 // ICC Profile
+	f.nOI = 0 // OutputIntents
 	f.pages = make([]*bytes.Buffer, 0, 8)
 	f.pages = append(f.pages, bytes.NewBufferString("")) // pages[0] is unused (1-based)
 	f.pageSizes = make(map[int]SizeType)
@@ -565,7 +567,7 @@ func (f *Fpdf) SetDisplayMode(zoomStr, layoutStr string) {
 		layoutStr = "default"
 	}
 	switch zoomStr {
-	case "fullpage", "fullwidth", "real", "default":
+	case "fullpage", "fullwidth", "fullheight", "real", "real1.25", "real1.5", "real1.75", "default":
 		f.zoomMode = zoomStr
 	default:
 		f.err = fmt.Errorf("incorrect zoom display mode: %s", zoomStr)
@@ -677,13 +679,19 @@ func (f *Fpdf) SetCreator(creatorStr string, isUTF8 bool) {
 }
 
 // SetXmpMetadata defines XMP metadata that will be embedded with the document.
-func (f *Fpdf) SetICCProfile(iccRelativeFilePath string) {
-	f.iccFile = iccRelativeFilePath
+func (f *Fpdf) SetICCProfile(iccData *IccData) {
+	if(iccData != nil) {
+		f.iccData = iccData
+	}
 }
 
 // SetXmpMetadata defines XMP metadata that will be embedded with the document.
 func (f *Fpdf) SetXmpMetadata(xmpStream []byte) {
 	f.xmp = xmpStream
+}
+
+func (f *Fpdf) SetXmpCompression(cXmp bool) { // by unixman
+	f.compressXMP = cXmp
 }
 
 // AliasNbPages defines an alias for the total number of pages. It will be
@@ -4258,6 +4266,11 @@ func (f *Fpdf) putpages() {
 		}
 		f.outf("/Contents %d 0 R>>", f.n+1)
 		f.out("endobj")
+		//-- fix by unixman, broken 1st page link if using attachments
+		if(f.fPage <= 0) { // only update on 1st page
+			f.fPage = f.n
+		} //end if
+		//-- #
 		// Page content
 		f.newobj()
 		if f.compress {
@@ -4983,30 +4996,49 @@ func (f *Fpdf) putcatalog() {
 	if f.lang != "" {
 		f.outf("/Lang (%s)", f.lang)
 	}
-	switch f.zoomMode {
-	case "fullpage":
-		f.out("/OpenAction [3 0 R /Fit]")
-	case "fullwidth":
-		f.out("/OpenAction [3 0 R /FitH null]")
-	case "real":
-		f.out("/OpenAction [3 0 R /XYZ null null 1]")
-	}
-	// } 	else if !is_string($this->zoomMode))
-	// 		$this->out('/OpenAction [3 0 R /XYZ null null '.sprintf('%.2f',$this->zoomMode/100).']');
-	switch f.layoutMode {
-	case "single", "SinglePage":
-		f.out("/PageLayout /SinglePage")
-	case "continuous", "OneColumn":
-		f.out("/PageLayout /OneColumn")
-	case "two", "TwoColumnLeft":
-		f.out("/PageLayout /TwoColumnLeft")
-	case "TwoColumnRight":
-		f.out("/PageLayout /TwoColumnRight")
-	case "TwoPageLeft", "TwoPageRight":
-		if f.pdfVersion < pdfVers1_5 {
-			f.pdfVersion = pdfVers1_5
+	if(f.fPage > 0) { // by unixman ; if something went wrong and first page obj number is not set skip this to avoid corruption
+		switch f.zoomMode { // f.fPage ; fix by unixman
+			case "fullpage":
+			//	f.out("/OpenAction [3 0 R /Fit]")
+				f.outf("/OpenAction [%d 0 R /Fit]", f.fPage)
+			case "fullwidth":
+			//	f.out("/OpenAction [3 0 R /FitH null]")
+				f.outf("/OpenAction [%d 0 R /FitH null]", f.fPage)
+			case "fullheight":
+			//	f.out("/OpenAction [3 0 R /FitV null]")
+				f.outf("/OpenAction [%d 0 R /FitV null]", f.fPage)
+			case "real":
+			//	f.out("/OpenAction [3 0 R /XYZ null null 1]")
+				f.outf("/OpenAction [%d 0 R /XYZ null null 1]", f.fPage)
+			case "real1.25":
+			//	f.out("/OpenAction [3 0 R /XYZ null null 1.25]")
+				f.outf("/OpenAction [%d 0 R /XYZ null null 1.25]", f.fPage)
+			case "real1.5":
+			//	f.out("/OpenAction [3 0 R /XYZ null null 1.5]")
+				f.outf("/OpenAction [%d 0 R /XYZ null null 1.5]", f.fPage)
+			case "real1.75":
+			//	f.out("/OpenAction [3 0 R /XYZ null null 1.75]")
+				f.outf("/OpenAction [%d 0 R /XYZ null null 1.75]", f.fPage)
 		}
-		f.out("/PageLayout /" + f.layoutMode)
+	} //end if
+	switch f.layoutMode {
+		case "single":
+			f.out("/PageLayout /single")
+		case "SinglePage":
+			f.out("/PageLayout /SinglePage")
+		case "continuous":
+			f.out("/PageLayout /continuous")
+		case "OneColumn":
+			f.out("/PageLayout /OneColumn")
+		case "two", "TwoColumnLeft":
+			f.out("/PageLayout /TwoColumnLeft")
+		case "TwoColumnRight":
+			f.out("/PageLayout /TwoColumnRight")
+		case "TwoPageLeft", "TwoPageRight":
+			if f.pdfVersion < pdfVers1_5 {
+				f.pdfVersion = pdfVers1_5
+			}
+			f.out("/PageLayout /" + f.layoutMode)
 	}
 	// Bookmarks
 	if len(f.outlines) > 0 {
@@ -5018,29 +5050,46 @@ func (f *Fpdf) putcatalog() {
 	if(f.nXmp > 0) {
 		f.outf("/Metadata %d 0 R", f.nXmp) // unixman, PDF/A
 	}
-	if(f.nIcc > 0) {
-		f.outf("/OutputIntents [<</Type /OutputIntent /S /GTS_PDFA1 /OutputConditionIdentifier (sRGB2014.icc) /Info (sRGB2014.icc) /RegistryName (color.org) /DestOutputProfile %d 0 R>>]", f.nIcc)
+	if(f.nOI > 0) {
+		f.outf("/OutputIntents [%d 0 R]", f.nOI) // unixman, PDF/A
 	}
 	//--
 	// Layers
 	f.layerPutCatalog()
-	// Name dictionary :
-	//	-> Javascript
-	//	-> Embedded files
-	f.out("/Names <<")
-	// JavaScript
-	if f.javascript != nil {
-		f.outf("/JavaScript %d 0 R", f.nJs)
+	//-- PDF/A AF Entry
+	theAFEntry := f.getAFEntries()
+	if(theAFEntry != "") {
+		f.outf("/AF [%s]", theAFEntry) // unixman PDF/A
 	}
-	// Embedded files
-	f.outf("/EmbeddedFiles %s", f.getEmbeddedFiles())
-	f.out(">>")
+	//-- added condition by unixman
+	if((len(f.attachments) > 0) || (f.javascript != nil)) {
+		// Name dictionary : uxm, reversed order
+		//	-> Javascript
+		//	-> Embedded files
+		var embedData []string = []string{}
+		if(len(f.attachments) > 0) {
+			var eFiles string = smart.StrTrimWhitespaces(f.getEmbeddedFiles())
+			if(eFiles != "") {
+				embedData = append(embedData, smart.StrTrimWhitespaces(fmt.Sprintf("/EmbeddedFiles %s", eFiles)))
+			} //end if
+		} //end if
+		// JavaScript
+		if(f.javascript != nil) {
+			embedData = append(embedData, smart.StrTrimWhitespaces(fmt.Sprintf("/JavaScript %d 0 R", f.nJs)))
+		} //end if
+		if(len(embedData) > 0) {
+			f.outf("/Names << %s >>", smart.StrTrimWhitespaces(smart.Implode(" ", embedData)))
+		} //end if
+	} //end if
+	//-- #
 }
 
 func (f *Fpdf) putheader() {
 	defer smart.PanicHandler()
 	f.outf("%%PDF-%s", f.pdfVersion)
 	//-- unixman: add header Binary comment: PDF/A
+//	f.out("%µ¶") // fix from upstream, replaced below with better supported than this fix of codeberg.org/go-pdf/fpdf/commit/7df2ab8
+	//-- better supported (GS): unixman
 //	f.outf("%%%s", "\xE2\xE3\xCF\xD3") // pdf-a/tcpdf/php # http://www.fpdf.org/en/script/script103.php
 //	f.outf("%%%s", smart.Hex2Bin("e2e3cfd3")) // mpdf/php
 	f.outf("%%%s", smart.Hex2Bin("c7ec8fa2")) // gs
@@ -5062,21 +5111,56 @@ func (f *Fpdf) puttrailer() {
 }
 
 func (f *Fpdf) puticc() {
-	f.iccFile = smart.StrTrimWhitespaces(f.iccFile)
-	if(f.iccFile == "") {
+	if(f.iccData == nil) {
 		return
 	}
-	iccData, errIccRead := smart.SafePathFileRead(f.iccFile, false)
-	if(errIccRead != nil) {
+	if(smart.StrTrimWhitespaces(f.iccData.FName) == "") {
 		f.isFatalErr = true
-		log.Println("[ERROR]", smart.CurrentFunctionName(), "Failed to Read the ICC Profile:", f.iccFile, "Reason:", errIccRead)
+		log.Println("[ERROR]", smart.CurrentFunctionName(), "Failed to Read the ICC Profile:", "FileName is Empty")
+		return
+	}
+	iccData := f.iccData.FContent
+	if(iccData == nil) {
+		f.isFatalErr = true
+		log.Println("[ERROR]", smart.CurrentFunctionName(), "Failed to Read the ICC Profile:", "Data is Empty")
 		return
 	}
 	f.newobj()
-	f.outf("<< /Length %d /N 3 >>", len(iccData))
-	f.putstream([]byte(iccData))
+	//-- unixman
+	if f.compress {
+		sum := checksum(iccData)
+		mem := xmem.compress(iccData)
+		data := mem.bytes()
+	//	f.outf("<< /Filter /FlateDecode /Length %d /N 3 >>", len(data))
+		f.outf("<< /Filter /FlateDecode /Length %d /Params << /CheckSum <%s> /Size %d >> /N 3 >>", len(data), sum, len(iccData))
+		f.putstream(data)
+		mem.release()
+	} else {
+	//-- #
+		f.outf("<< /Length %d /N 3 >>", len(iccData))
+		f.putstream(iccData)
+	}
 	f.out("endobj")
+	//--
 	f.nIcc = f.n
+	//fmt.Println("ICC num", f.nIcc)
+	//-- unixman PDF/A + sign
+	fOnlyNameIcc := smart.StrTrimWhitespaces(smart.PathBaseName(f.iccData.FName))
+	if(fOnlyNameIcc == "") {
+		fOnlyNameIcc = "default.icc"
+	} //end if
+	fPrettyNameIcc := smart.StrTrimWhitespaces(smart.PathBaseNoExtName(fOnlyNameIcc))
+	if(fPrettyNameIcc == "") {
+		fPrettyNameIcc = "default"
+	} //end if
+	fPrettyNameIcc = smart.StrTrimWhitespaces((smart.StrReplaceAll(fPrettyNameIcc, "-", " ")))
+	fPrettyNameIcc = smart.StrTrimWhitespaces(fPrettyNameIcc + " ICC Profile")
+	//fmt.Println(fOnlyNameIcc, fPrettyNameIcc)
+	f.newobj()
+	f.outf("<</Type /OutputIntent /S /GTS_PDFA1 /OutputConditionIdentifier (" + fOnlyNameIcc + ") /Info (" + fPrettyNameIcc + ") /RegistryName (color.org) /DestOutputProfile %d 0 R>>", f.nIcc)
+	f.out("endobj")
+	f.nOI = f.n
+	//-- #
 }
 
 func (f *Fpdf) putxmp() {
@@ -5084,8 +5168,18 @@ func (f *Fpdf) putxmp() {
 		return
 	}
 	f.newobj()
-	f.outf("<< /Type /Metadata /Subtype /XML /Length %d >>", len(f.xmp))
-	f.putstream(f.xmp)
+	if(f.compress && f.compressXMP) { // unixman: PDF/A compliancy does not pass: Metadata object stream contains Filter key
+		mem := xmem.compress(f.xmp)
+		data := mem.bytes()
+		f.outf("<< /Type /Metadata /Subtype /XML /Filter /FlateDecode /Length %d >>", len(data))
+		f.putstream(data)
+		mem.release()
+		//println("Using Compressed XMP")
+	} else {
+		//println("Using Normal XMP")
+		f.outf("<< /Type /Metadata /Subtype /XML /Length %d >>", len(f.xmp))
+		f.putstream(f.xmp)
+	}
 	f.out("endobj")
 	f.nXmp = f.n
 }

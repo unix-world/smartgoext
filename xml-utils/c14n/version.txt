@@ -1,9 +1,0 @@
-v.20241020
-
-go 1.21
-
-based on:
-    github.com/russellhaering/goxmldsig @head.20240212 [ subset: canonicalize only ]
-
-rework: by unixman
-

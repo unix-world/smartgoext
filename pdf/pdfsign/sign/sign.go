@@ -241,6 +241,11 @@ func (context *SignContext) doPDFSign() error {
 
 	// If not a timestamp signature
 	if context.SignData.Signature.CertType != TimeStampSignature {
+		//-- fix from upstream: 94790aeb1f487431b548a0bf6115422c177365e5
+		if context.SignData.Certificate == nil {
+			return fmt.Errorf("certificate is required")
+		}
+		//-- #
 		switch context.SignData.Certificate.SignatureAlgorithm.String() {
 		case "SHA1-RSA":
 		case "ECDSA-SHA1":

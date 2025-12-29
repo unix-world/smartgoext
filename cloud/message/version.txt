@@ -1,0 +1,7 @@
+github.com/emersion/go-message @head.20251229
+
+go 1.14
+
+require
+	golang.org/x/text
+

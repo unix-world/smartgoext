@@ -1,14 +1,17 @@
 package sign
 
 import (
-	"crypto"
-	"encoding/asn1"
 	"errors"
 	"fmt"
+	"log"
+
 	"io"
 	"math"
 	"strings"
 	"time"
+
+	"crypto"
+	"encoding/asn1"
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
@@ -44,7 +47,11 @@ func pdfString(text string) string {
 		enc := unicode.UTF16(unicode.BigEndian, unicode.UseBOM).NewEncoder()
 		res, _, err := transform.String(enc, text)
 		if err != nil {
-			panic(err)
+			//-- fix by unixman
+		//	panic(err)
+			log.Println("[ERROR]", "PDFSign.helpers.pdfString", err) // unixman
+			return "()"
+			//-- #
 		}
 		return "(" + res + ")"
 	}

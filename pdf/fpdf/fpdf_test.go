@@ -20,6 +20,12 @@
 
 package fpdf_test
 
+// contains fixes by unixman
+
+// v.20251203.2358
+// (c) 2023-present unix-world.org
+// license: BSD
+
 import (
 	"bytes"
 	"fmt"
@@ -291,6 +297,19 @@ func TestSplitTextHandleCharacterNotInFontRange(t *testing.T) {
 		_ = pdf.SplitText(str, 100)
 	}
 
+}
+
+func TestAFMFontParser(t *testing.T) {
+	const embed = true
+	err := fpdf.MakeFont(
+		example.FontFile("cmmi10.pfb"),
+		example.FontFile("cp1252.map"),
+		example.FontDir(),
+		nil, embed,
+	)
+	if err != nil {
+		t.Fatalf("could not create cmmi10 font: %v", err)
+	}
 }
 
 func BenchmarkLineTo(b *testing.B) {

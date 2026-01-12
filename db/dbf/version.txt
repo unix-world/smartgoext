@@ -1,4 +1,4 @@
-github.com/Bowbaq/dbf @head.20241230
+github.com/Bowbaq/dbf @head.20251230
 
 go 1.15
 

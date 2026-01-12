@@ -1,0 +1,6 @@
+module github.com/russellhaering/goxmldsig/etreeutils @head.20260110
+
+go 1.22
+
+modified by unixman, depends on:
+	github.com/unix-world/smartgo/data-structs/xml-etree/etree

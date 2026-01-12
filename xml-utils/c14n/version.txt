@@ -1,0 +1,8 @@
+v.20260110
+
+go 1.21
+
+based on:
+    github.com/russellhaering/goxmldsig @head.20250723
+
+rework: by unixman

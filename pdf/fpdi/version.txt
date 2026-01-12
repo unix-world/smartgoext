@@ -1,4 +1,4 @@
-github.com/phpdave11/gofpdi @head.20241215
+github.com/phpdave11/gofpdi @head.20251230
 
 refactored by unixman as:
     github.com/unix-world/smartgoext/pdf/fpdi

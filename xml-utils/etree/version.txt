@@ -1,0 +1,4 @@
+github.com/beevik/etree v1.5.1 @ 20250723
+
+go 1.21
+

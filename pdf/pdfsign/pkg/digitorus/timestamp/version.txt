@@ -1,0 +1,9 @@
+github.com/digitorus/timestamp @head.20260211
+
+go 1.16
+
+require
+    github.com/digitorus/pkcs7 (modified)
+
+modified by unixman, r.20260214
+

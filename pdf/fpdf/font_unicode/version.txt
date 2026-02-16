@@ -1,2 +1,0 @@
-IBM-Plex-Sans
-version: 6.4.2

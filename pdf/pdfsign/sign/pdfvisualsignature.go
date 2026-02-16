@@ -129,9 +129,25 @@ func (context *SignContext) createIncPageUpdate(pageNumber, annot uint32) ([]byt
 	// TODO: Update digitorus/pdf to get raw values without resolving pointers
 	for _, key := range page.Keys() {
 		switch key {
-		case "Contents", "Parent":
+		case "Parent":
 			ptr := page.Key(key).GetPtr()
 			page_buffer.WriteString(fmt.Sprintf("  /%s %d 0 R\n", key, ptr.GetID()))
+		case "Contents":
+			// Special handling for Contents - must preserve stream structure
+			contentsValue := page.Key(key)
+			if contentsValue.Kind() == pdf.Array {
+				// If Contents is an array, keep it as an array reference
+				page_buffer.WriteString("  /Contents [")
+				for i := 0; i < contentsValue.Len(); i++ {
+					ptr := contentsValue.Index(i).GetPtr()
+					page_buffer.WriteString(fmt.Sprintf(" %d 0 R", ptr.GetID()))
+				}
+				page_buffer.WriteString(" ]\n")
+			} else {
+				// If Contents is a single reference, keep it as a single reference
+				ptr := contentsValue.GetPtr()
+				page_buffer.WriteString(fmt.Sprintf("  /%s %d 0 R\n", key, ptr.GetID()))
+			}
 		case "Annots":
 			page_buffer.WriteString("  /Annots [\n")
 			for i := 0; i < page.Key("Annots").Len(); i++ {
@@ -154,21 +170,35 @@ func (context *SignContext) createIncPageUpdate(pageNumber, annot uint32) ([]byt
 	return page_buffer.Bytes(), nil
 }
 
-// Helper function to find a page by its number.
+// Helper function to find a page by its number
 func findPageByNumber(pages pdf.Value, pageNumber uint32) (pdf.Value, error) {
+	page, remaining, err := findPageByNumberRec(pages, pageNumber)
+	if err != nil {
+		return pdf.Value{}, err
+	}
+	if remaining != 0 {
+		return pdf.Value{}, fmt.Errorf("page number %d not found", pageNumber)
+	}
+	return page, nil
+}
+
+// Internal recursive helper that returns the found page and the remaining page number to find.
+func findPageByNumberRec(pages pdf.Value, pageNumber uint32) (pdf.Value, uint32, error) {
 	if pages.Key("Type").Name() == "Pages" {
 		kids := pages.Key("Kids")
 		for i := 0; i < kids.Len(); i++ {
-			page, err := findPageByNumber(kids.Index(i), pageNumber)
-			if err == nil {
-				return page, nil
+			page, remaining, err := findPageByNumberRec(kids.Index(i), pageNumber)
+			if err == nil && remaining == 0 {
+				return page, 0, nil
 			}
+			pageNumber = remaining
 		}
+		return pdf.Value{}, pageNumber, fmt.Errorf("page number %d not found", pageNumber)
 	} else if pages.Key("Type").Name() == "Page" {
 		if pageNumber == 1 {
-			return pages, nil
+			return pages, 0, nil
 		}
-		pageNumber--
+		return pdf.Value{}, pageNumber - 1, nil
 	}
-	return pdf.Value{}, fmt.Errorf("page number %d not found", pageNumber)
+	return pdf.Value{}, pageNumber, fmt.Errorf("page number %d not found", pageNumber)
 }

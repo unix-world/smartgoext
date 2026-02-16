@@ -1,2 +1,0 @@
-quickjs-libc.h
-quickjs.h

@@ -28,7 +28,7 @@ func (s asn1Structured) EncodeTo(out *bytes.Buffer) error {
 	}
 	//encodeIndent--
 	out.Write(s.tagBytes)
-	encodeLength(out, inner.Len())
+	_ = encodeLength(out, inner.Len())
 	out.Write(inner.Bytes())
 	return nil
 }
@@ -50,6 +50,7 @@ func (p asn1Primitive) EncodeTo(out *bytes.Buffer) error {
 	//fmt.Printf("%s--> tag: % X length: %d\n", strings.Repeat("| ", encodeIndent), p.tagBytes, p.length)
 	//fmt.Printf("%s--> content length: %d\n", strings.Repeat("| ", encodeIndent), len(p.content))
 	out.Write(p.content)
+
 	return nil
 }
 
@@ -64,7 +65,7 @@ func ber2der(ber []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	obj.EncodeTo(out)
+	_ = obj.EncodeTo(out)
 
 	return out.Bytes(), nil
 }
@@ -101,6 +102,7 @@ func lengthLength(i int) (numBytes int) {
 // added to 0x80. The length is encoded in big endian encoding follow after
 //
 // Examples:
+//
 //  length | byte 1 | bytes n
 //  0      | 0x00   | -
 //  120    | 0x78   | -
@@ -187,7 +189,7 @@ func readObject(ber []byte, offset int) (asn1Object, int, error) {
 			// compared with the remaining available bytes (`contentEnd > berLen`)
 			return nil, 0, errors.New("ber2der: cannot move offset forward, end of ber data reached")
 		}
-		if (int)(ber[offset]) == 0x0 && (numberOfBytes == 1 || ber[offset+1] <= 0x7F)  {
+		if (int)(ber[offset]) == 0x0 && (numberOfBytes == 1 || ber[offset+1] <= 0x7F) {
 			// `numberOfBytes == 1` is an important conditional to avoid a potential out of bounds panic with `ber[offset+1]`
 			return nil, 0, errors.New("ber2der: BER tag length has leading zero")
 		}

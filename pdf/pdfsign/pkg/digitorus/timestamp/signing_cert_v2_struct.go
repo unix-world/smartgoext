@@ -21,6 +21,7 @@ type essCertIDv2 struct {
 	IssuerSerial  issuerAndSerial `asn1:"optional"`
 }
 
-type signingCertificateV2 struct {
+//type signingCertificateV2 struct {
+type SigningCertificateV2 struct { // unixman
 	Certs []essCertIDv2
 }

@@ -1,16 +1,17 @@
-github.com/digitorus/pdfsign @head.20250106
-
-github.com/unix-world/go-pdfsign @head.20250310
+github.com/digitorus/pdfsign @head.20260211
 
 go 1.22
 
 require:
-	github.com/digitorus/pdf v0.1.2
-	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
-	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
-	github.com/mattetti/filebuffer v1.0.1
+	github.com/digitorus/pdf
+	github.com/digitorus/pkcs7 (modified)
+	github.com/digitorus/timestamp (modified)
+	github.com/mattetti/filebuffer
 	golang.org/x/crypto
 	golang.org/x/text
 
-contains fixes by unixman, r.20250317
+contains fixes and modifications, by unixman, r.20260214
     * default algo set to SHA384
+    * bug fix: if TSA URL was empty, the sign by certificate expanding was except from 9000
+    * verify: fixed to work, in the original package this is failing ...
+

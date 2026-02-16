@@ -254,8 +254,9 @@ func (context *SignContext) createSigningCertificateAttribute() (*pkcs7.Attribut
 		b.AddASN1(cryptobyte_asn1.SEQUENCE, func(b *cryptobyte.Builder) { // []ESSCertID, []ESSCertIDv2
 			b.AddASN1(cryptobyte_asn1.SEQUENCE, func(b *cryptobyte.Builder) { // ESSCertID, ESSCertIDv2
 				if context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA1 &&
-				//	context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA256 { // default SHA-256
-					context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA384 { // default SHA-384 // {{{SYNC-PDFSIGN-DEFAULT-HASH-ALGO}}}
+					context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA256 && // default SHA-256
+					context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA384 && // unixman ; {{{SYNC-PDFSIGN-DEFAULT-HASH-ALGO}}}
+					context.SignData.DigestAlgorithm.HashFunc() != crypto.SHA512 {  // unixman
 					b.AddASN1(cryptobyte_asn1.SEQUENCE, func(b *cryptobyte.Builder) { // AlgorithmIdentifier
 						b.AddASN1ObjectIdentifier(getOIDFromHashAlgorithm(context.SignData.DigestAlgorithm))
 					})
@@ -417,7 +418,9 @@ func (context *SignContext) GetTSA(sign_content []byte) (timestamp_response []by
 
 	if err != nil || (code < 200 || code > 299) {
 		if err == nil {
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 			body, _ := io.ReadAll(resp.Body)
 			return nil, errors.New("non success response (" + strconv.Itoa(code) + "): " + string(body))
 		}
@@ -425,7 +428,9 @@ func (context *SignContext) GetTSA(sign_content []byte) (timestamp_response []by
 		return nil, errors.New("non success response (" + strconv.Itoa(code) + ")")
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	timestamp_response_body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
@@ -447,7 +452,7 @@ func (context *SignContext) replaceSignature() error {
 		log.Println("Signature too long, retrying with increased buffer size.")
 		// set new base and try signing again
 		context.SignatureMaxLengthBase += (uint32(len(dst)) - context.SignatureMaxLength) + 1
-		return context.doPDFSign()
+		return context.SignPDF()
 	}
 
 	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
@@ -524,7 +529,7 @@ func (context *SignContext) createPropBuild() string {
 	// Specification, which provides implementation guidelines.
 	buffer.WriteString(" /Prop_Build <<\n")
 //	buffer.WriteString("   /App << /Name /Digitorus#20PDFSign >>\n")
-	buffer.WriteString("   /App << /Name /SmartGoExt#20PDFSign >>\n")
+	buffer.WriteString("   /App << /Name /SmartGoExt#20PDFSign >>\n") // unixman
 	buffer.WriteString(" >>\n")
 
 	return buffer.String()

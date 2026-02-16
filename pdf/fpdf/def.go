@@ -630,6 +630,7 @@ type Fpdf struct {
 	links            []intLinkType              // array of internal links
 	attachments      []Attachment               // slice of content to embed globally
 	pageAttachments  [][]annotationAttach       // 1-based array of annotation for file attachments (per page)
+	allowPrintScale  bool                       // if set to TRUE will allow print scaling, otherwise don't (by unixman)
 	outlines         []outlineType              // array of outlines
 	outlineRoot      int                        // root of outlines
 	autoPageBreak    bool                       // automatic page breaking

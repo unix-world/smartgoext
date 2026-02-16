@@ -230,12 +230,20 @@ func (s *state) endBinaryShift(index int) *state {
 	}
 }
 
-// Returns true if "this" state is better (or equal) to be in than "that"
+// Returns true if "this" state is better (or equal) to be in than "other"
 // state under all possible circumstances.
+//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+/*
 func (this *state) isBetterThanOrEqualTo(other *state) bool {
 	mySize := this.bitCount + (latchTable[this.mode][other.mode] >> 16)
 
 	if other.bShiftByteCount > 0 && (this.bShiftByteCount == 0 || this.bShiftByteCount > other.bShiftByteCount) {
+*/
+func (s *state) isBetterThanOrEqualTo(other *state) bool {
+	mySize := s.bitCount + (latchTable[s.mode][other.mode] >> 16)
+
+	if other.bShiftByteCount > 0 && (s.bShiftByteCount == 0 || s.bShiftByteCount > other.bShiftByteCount) {
+//--#
 		mySize += 10 // Cost of entering Binary Shift mode.
 	}
 	return mySize <= other.bitCount

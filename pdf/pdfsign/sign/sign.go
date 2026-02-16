@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 	"bytes"
-//	"log"
 
 //	"github.com/digitorus/pdf"
 	"github.com/unix-world/smartgoext/pdf/pdfsign/pkg/digitorus/pdf"
@@ -17,113 +15,12 @@ import (
 //	"github.com/digitorus/pkcs7"
 	"github.com/unix-world/smartgoext/crypto/pkcs7"
 
-//	"github.com/digitorus/pdfsign/revocation"
-	"github.com/unix-world/smartgoext/pdf/pdfsign/revocation"
-
 //	"github.com/mattetti/filebuffer"
 	"github.com/unix-world/smartgoext/pdf/pdfsign/pkg/mattetti/filebuffer"
 )
 
-type CatalogData struct {
-	ObjectId   uint32
-	RootString string
-}
 
-type TSA struct {
-	URL      string
-	Username string
-	Password string
-}
-
-type RevocationFunction func(cert, issuer *x509.Certificate, i *revocation.InfoArchival) error
-
-type SignData struct {
-	Signature          SignDataSignature
-	Signer             crypto.Signer
-	DigestAlgorithm    crypto.Hash
-	Certificate        *x509.Certificate
-	CertificateChains  [][]*x509.Certificate
-	TSA                TSA
-	RevocationData     revocation.InfoArchival
-	RevocationFunction RevocationFunction
-	Appearance         Appearance
-
-	objectId uint32
-}
-
-// Appearance represents the appearance of the signature
-type Appearance struct {
-	Visible     bool
-	Page        uint32
-	LowerLeftX  float64
-	LowerLeftY  float64
-	UpperRightX float64
-	UpperRightY float64
-}
-
-type VisualSignData struct {
-	pageObjectId uint32
-	objectId     uint32
-}
-
-type InfoData struct {
-	ObjectId uint32
-}
-
-//go:generate stringer -type=CertType
-type CertType uint
-
-const (
-	CertificationSignature CertType = iota + 1
-	ApprovalSignature
-	UsageRightsSignature
-	TimeStampSignature
-)
-
-//go:generate stringer -type=DocMDPPerm
-type DocMDPPerm uint
-
-const (
-	DoNotAllowAnyChangesPerms DocMDPPerm = iota + 1
-	AllowFillingExistingFormFieldsAndSignaturesPerms
-	AllowFillingExistingFormFieldsAndSignaturesAndCRUDAnnotationsPerms
-)
-
-type SignDataSignature struct {
-	CertType   CertType
-	DocMDPPerm DocMDPPerm
-	Info       SignDataSignatureInfo
-}
-
-type SignDataSignatureInfo struct {
-	Name        string
-	Location    string
-	Reason      string
-	ContactInfo string
-	Date        time.Time
-}
-
-type SignContext struct {
-	InputFile              io.ReadSeeker
-	OutputFile             io.Writer
-	OutputBuffer           *filebuffer.Buffer
-	SignData               SignData
-	CatalogData            CatalogData
-	VisualSignData         VisualSignData
-	InfoData               InfoData
-	PDFReader              *pdf.Reader
-	NewXrefStart           int64
-	ByteRangeValues        []int64
-	SignatureMaxLength     uint32
-	SignatureMaxLengthBase uint32
-
-	existingSignatures []SignData
-	lastXrefID         uint32
-	newXrefEntries     []xrefEntry
-	updatedXrefEntries []xrefEntry
-}
-
-
+//-- unixman
 func SignPDF(inputBytes []byte, dataSign SignData) ([]byte, error) {
 	//--
 	size := int64(len(inputBytes))
@@ -140,7 +37,7 @@ func SignPDF(inputBytes []byte, dataSign SignData) ([]byte, error) {
 	//--
 	outputBuff := bytes.Buffer{}
 	//--
-	errSgn := doSign(inputBuff, &outputBuff, rdr, size, dataSign)
+	errSgn := Sign(inputBuff, &outputBuff, rdr, size, dataSign)
 	if(errSgn != nil) {
 		return nil, errSgn
 	} //end if
@@ -148,6 +45,7 @@ func SignPDF(inputBytes []byte, dataSign SignData) ([]byte, error) {
 	return outputBuff.Bytes(), nil
 	//--
 }
+//-- #
 
 
 func SignFile(input string, output string, sign_data SignData) error {
@@ -155,13 +53,17 @@ func SignFile(input string, output string, sign_data SignData) error {
 	if err != nil {
 		return err
 	}
-	defer input_file.Close()
+	defer func() {
+		_ = input_file.Close()
+	}()
 
 	output_file, err := os.Create(output)
 	if err != nil {
 		return err
 	}
-	defer output_file.Close()
+	defer func() {
+		_ = output_file.Close()
+	}()
 
 	finfo, err := input_file.Stat()
 	if err != nil {
@@ -174,11 +76,11 @@ func SignFile(input string, output string, sign_data SignData) error {
 		return err
 	}
 
-	return doSign(input_file, output_file, rdr, size, sign_data)
+	return Sign(input_file, output_file, rdr, size, sign_data)
 }
 
 
-func doSign(input io.ReadSeeker, output io.Writer, rdr *pdf.Reader, size int64, sign_data SignData) error {
+func Sign(input io.ReadSeeker, output io.Writer, rdr *pdf.Reader, size int64, sign_data SignData) error {
 	sign_data.objectId = uint32(rdr.XrefInformation.ItemCount) + 2
 
 	context := SignContext{
@@ -196,7 +98,7 @@ func doSign(input io.ReadSeeker, output io.Writer, rdr *pdf.Reader, size int64, 
 	}
 	context.existingSignatures = existingSignatures
 
-	err = context.doPDFSign()
+	err = context.SignPDF()
 	if err != nil {
 		return err
 	}
@@ -204,7 +106,8 @@ func doSign(input io.ReadSeeker, output io.Writer, rdr *pdf.Reader, size int64, 
 	return nil
 }
 
-func (context *SignContext) doPDFSign() error {
+
+func (context *SignContext) SignPDF() error {
 	// set defaults
 	if context.SignData.Signature.CertType == 0 {
 		context.SignData.Signature.CertType = 1
@@ -214,7 +117,7 @@ func (context *SignContext) doPDFSign() error {
 	}
 	if !context.SignData.DigestAlgorithm.Available() {
 	//	context.SignData.DigestAlgorithm = crypto.SHA256
-		context.SignData.DigestAlgorithm = crypto.SHA384 // {{{SYNC-PDFSIGN-DEFAULT-HASH-ALGO}}}
+		context.SignData.DigestAlgorithm = crypto.SHA384 // unixman ; {{{SYNC-PDFSIGN-DEFAULT-HASH-ALGO}}}
 	}
 	if context.SignData.Appearance.Page == 0 {
 		context.SignData.Appearance.Page = 1
@@ -241,11 +144,10 @@ func (context *SignContext) doPDFSign() error {
 
 	// If not a timestamp signature
 	if context.SignData.Signature.CertType != TimeStampSignature {
-		//-- fix from upstream: 94790aeb1f487431b548a0bf6115422c177365e5
 		if context.SignData.Certificate == nil {
 			return fmt.Errorf("certificate is required")
 		}
-		//-- #
+
 		switch context.SignData.Certificate.SignatureAlgorithm.String() {
 		case "SHA1-RSA":
 		case "ECDSA-SHA1":
@@ -306,9 +208,9 @@ func (context *SignContext) doPDFSign() error {
 	//
 	// Different TSA servers provide different response sizes, we
 	// might need to make this configurable or detect and store.
-	if context.SignData.TSA.URL != "" {
+//	if context.SignData.TSA.URL != "" { // unixman: bug fix, use this also if TSA URL is N/A otherwise will get an error when verify: `failed to verify file (malformed hex string)`
 		context.SignatureMaxLength += uint32(hex.EncodedLen(9000))
-	}
+//	}
 
 	// Create the signature object
 	var signature_object []byte
@@ -319,7 +221,9 @@ func (context *SignContext) doPDFSign() error {
 	default:
 		signature_object = context.createSignaturePlaceholder()
 	}
+
 //fmt.Println(string(signature_object)) // unixman
+
 	// Write the new signature object
 	context.SignData.objectId, err = context.addObject(signature_object)
 	if err != nil {
@@ -408,3 +312,4 @@ func (context *SignContext) doPDFSign() error {
 
 	return nil
 }
+

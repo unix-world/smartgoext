@@ -72,7 +72,11 @@ func AddCheckSum(content string) (string, error) {
 			}
 			even = !even
 		} else {
-			return "", fmt.Errorf("can not encode \"%s\"", content)
+			//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+		//	return "", fmt.Errorf("can not encode \"%s\"", content)
+		//	return "", fmt.Errorf("can not encode %s", content)
+			return "", fmt.Errorf("can not encode %q", content)
+			//-- #
 		}
 	}
 
@@ -106,7 +110,10 @@ func EncodeWithColor(content string, interleaved bool, color barcode.ColorScheme
 				a, o1 = encodingTable[*lastRune]
 				b, o2 = encodingTable[r]
 				if !o1 || !o2 {
-					return nil, fmt.Errorf("can not encode \"%s\"", content)
+					//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+				//	return nil, fmt.Errorf("can not encode \"%s\"", content)
+					return nil, fmt.Errorf("can not encode %q", content)
+					//-- #
 				}
 				lastRune = nil
 			}
@@ -114,7 +121,10 @@ func EncodeWithColor(content string, interleaved bool, color barcode.ColorScheme
 			var ok bool
 			a, ok = encodingTable[r]
 			if !ok {
-				return nil, fmt.Errorf("can not encode \"%s\"", content)
+				//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+			//	return nil, fmt.Errorf("can not encode \"%s\"", content)
+				return nil, fmt.Errorf("can not encode %q", content)
+				//-- #
 			}
 			b = nonInterleavedSpace
 		}

@@ -1,5 +1,8 @@
 // Package timestamp implements the Time-Stamp Protocol (TSP) as specified in
 // RFC3161 (Internet X.509 Public Key Infrastructure Time-Stamp Protocol (TSP)).
+
+// modified by unixman: changed SHA256 to SHA384
+
 package timestamp
 
 import (
@@ -589,7 +592,8 @@ func (t *Timestamp) populateSigningCertificateV2Ext(certificate *x509.Certificat
 		}
 	}
 
-	signingCertificateV2 := signingCertificateV2{
+//	signingCertificateV2 := signingCertificateV2{
+	signingCertificateV2 := SigningCertificateV2{ // unixman
 		Certs: []essCertIDv2{{
 			HashAlgorithm: hashAlg,
 			CertHash:      h.Sum(nil),

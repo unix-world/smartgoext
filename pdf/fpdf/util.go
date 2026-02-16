@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20241215.1258
+// v.20260208.1258
 // (c) unix-world.org
 // license: BSD
 
@@ -31,7 +31,7 @@ import (
 	"io"
 	"math"
 	"os"
-	"path/filepath"
+//	"path/filepath"
 //	"strings"
 
 	smart "github.com/unix-world/smartgo"
@@ -246,6 +246,10 @@ func UnicodeTranslatorFromFile(fileStr string) (f func(string) string, err error
 //
 // The CellFormat_codepage example demonstrates this method.
 func (f *Fpdf) UnicodeTranslatorFromDescriptor(cpStr string) (rep func(string) string) {
+	//-- unixman: disable embed core fonts ... {{{SYNC-FPDF-DISABLE-CORE-FONTS}}}
+	rep = doNothing
+	//--
+	/*
 	if f.err == nil {
 		if len(cpStr) == 0 {
 			cpStr = "cp1252"
@@ -260,6 +264,8 @@ func (f *Fpdf) UnicodeTranslatorFromDescriptor(cpStr string) (rep func(string) s
 	} else {
 		rep = doNothing
 	}
+	*/
+	//-- #
 	return
 }
 

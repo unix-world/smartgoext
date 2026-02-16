@@ -22,7 +22,7 @@ package fpdf
 
 // contains fixes by unixman
 
-// v.20251203.2358
+// v.20260208.2358
 // (c) 2023-present unix-world.org
 // license: BSD
 
@@ -62,6 +62,8 @@ const (
 
 	SIGNATURE_PRODUCER 	string = "SmartGoExt.FPDF"
 )
+
+var cachedFonts map[string]fontDefType = map[string]fontDefType{} // unixman
 
 var gl struct {
 	catalogSort  bool
@@ -283,6 +285,14 @@ func (f *Fpdf) Ok() bool {
 // Err returns true if a processing error has occurred.
 func (f *Fpdf) Err() bool {
 	return f.err != nil
+}
+
+func (f *Fpdf) SetErr(errMsg string) { // by unixman
+	errMsg = smart.StrTrimWhitespaces(errMsg)
+	if(errMsg == "") {
+		errMsg = "FPDF SetErr must set a Non-Empty Error Message only ..."
+	}
+	f.err = smart.NewError(errMsg)
 }
 
 // ClearError unsets the internal Fpdf error. This method should be used with
@@ -597,6 +607,25 @@ func SetDefaultCompression(compress bool) {
 func (f *Fpdf) SetCompression(compress bool) {
 	f.compress = compress
 }
+
+//-- unixman
+func (f *Fpdf) SetCompressionLevel(level int) {
+	f.SetCompression(true)
+	if(level == 0) { // 0
+		compressionLevel = compressionLevelDefault
+	} else if(level == -1) { // -1
+		compressionLevel = compressionLevelSpeed
+	} else if(level == 1) { // 1
+		compressionLevel = compressionLevelBest
+	} else {
+		f.err = fmt.Errorf("incorrect compression level selected: %s", level)
+	}
+}
+
+func (f *Fpdf) AllowPrintScaling(allow bool) {
+	f.allowPrintScale = allow
+}
+//-- #
 
 // unixman: this is an override method, mostly usefull to generate 1.5 or 1.7 documents ; setting this value to 1.3 or 1.4 may override the real version calculated
 func (f *Fpdf) SetVersion(versionStr string) {
@@ -1960,6 +1989,7 @@ func (f *Fpdf) AddUTF8Font(familyStr, styleStr, fileStr string) {
 }
 
 func (f *Fpdf) addFont(familyStr, styleStr, fileStr string, isUTF8 bool) {
+
 	if fileStr == "" {
 		fileStr = smart.StrReplaceAll(familyStr, " ", "") + smart.StrToLower(styleStr)
 		if isUTF8 {
@@ -1968,12 +1998,30 @@ func (f *Fpdf) addFont(familyStr, styleStr, fileStr string, isUTF8 bool) {
 			fileStr += ".json"
 		}
 	}
+
 	if isUTF8 {
+
 		fontKey := getFontKey(familyStr, styleStr)
-		_, ok := f.fonts[fontKey]
+
+		var ok bool
+		//-- unixman fix
+		_, ok = cachedFonts[fontKey]
 		if ok {
+			_, ok = f.fonts[fontKey]
+			if !ok {
+			//	log.Println("[DEBUG]", "font is static cached:", fontKey)
+				f.fonts[fontKey] = cachedFonts[fontKey]
+				return
+			}
+		}
+		//--
+		_, ok = f.fonts[fontKey]
+		if ok {
+		//	log.Println("[DEBUG]", "font is dynamic cached:", fontKey)
 			return
 		}
+		//--
+
 		var ttfStat os.FileInfo
 		var err error
 		fileStr = path.Join(f.fontpath, fileStr)
@@ -2032,6 +2080,7 @@ func (f *Fpdf) addFont(familyStr, styleStr, fileStr string, isUTF8 bool) {
 			utf8File:  utf8File,
 		}
 		def.i, _ = generateFontID(def)
+		cachedFonts[fontKey] = def // unixman
 		f.fonts[fontKey] = def
 		f.fontFiles[fontKey] = fontFileType{
 			length1:  originalSize,
@@ -2040,7 +2089,9 @@ func (f *Fpdf) addFont(familyStr, styleStr, fileStr string, isUTF8 bool) {
 		f.fontFiles[fileStr] = fontFileType{
 			fontType: "UTF8",
 		}
+
 	} else {
+
 		if f.fontLoader != nil {
 			reader, err := f.fontLoader.Open(fileStr)
 			if err == nil {
@@ -2061,7 +2112,9 @@ func (f *Fpdf) addFont(familyStr, styleStr, fileStr string, isUTF8 bool) {
 		defer file.Close()
 
 		f.AddFontFromReader(familyStr, styleStr, file)
+
 	}
+
 }
 
 func makeSubsetRange(end int) map[int]int {
@@ -2103,9 +2156,7 @@ func (f *Fpdf) AddFontFromBytes(familyStr, styleStr string, jsonFileBytes, zFile
 // empty string for regular style, "B" for bold, "I" for italic, or "BI" or
 // "IB" for bold and italic combined.
 //
-// jsonFileBytes contain all bytes of JSON file.
-//
-// zFileBytes contain all bytes of Z file.
+// utf8Bytes contain all bytes of the TTF file.
 func (f *Fpdf) AddUTF8FontFromBytes(familyStr, styleStr string, utf8Bytes []byte) {
 	f.addFontFromBytes(fontFamilyEscape(familyStr), styleStr, nil, nil, utf8Bytes)
 }
@@ -2118,11 +2169,23 @@ func (f *Fpdf) addFontFromBytes(familyStr, styleStr string, jsonFileBytes, zFile
 	// load font key
 	var ok bool
 	fontkey := getFontKey(familyStr, styleStr)
-	_, ok = f.fonts[fontkey]
-
+	//-- unixman fix
+	_, ok = cachedFonts[fontkey]
 	if ok {
+		_, ok = f.fonts[fontkey]
+		if !ok {
+		//	log.Println("[DEBUG]", "font is static cached:", fontkey)
+			f.fonts[fontkey] = cachedFonts[fontkey]
+			return
+		}
+	}
+	//--
+	_, ok = f.fonts[fontkey]
+	if ok {
+	//	log.Println("[DEBUG]", "font is dynamic cached:", fontkey)
 		return
 	}
+	//--
 
 	if utf8Bytes != nil {
 
@@ -2168,8 +2231,11 @@ func (f *Fpdf) addFontFromBytes(familyStr, styleStr string, jsonFileBytes, zFile
 			usedRunes: sbarr,
 		}
 		def.i, _ = generateFontID(def)
+		cachedFonts[fontkey] = def // unixman
 		f.fonts[fontkey] = def
+
 	} else {
+
 		// load font definitions
 		var info fontDefType
 		err := json.Unmarshal(jsonFileBytes, &info)
@@ -2225,7 +2291,9 @@ func (f *Fpdf) addFontFromBytes(familyStr, styleStr string, jsonFileBytes, zFile
 		}
 
 		f.fonts[fontkey] = info
+
 	}
+
 }
 
 // getFontKey is used by AddFontFromReader and GetFontDesc
@@ -5040,6 +5108,7 @@ func (f *Fpdf) putcatalog() {
 			}
 			f.out("/PageLayout /" + f.layoutMode)
 	}
+	//--
 	// Bookmarks
 	if len(f.outlines) > 0 {
 		f.outf("/Outlines %d 0 R", f.outlineRoot)
@@ -5067,10 +5136,12 @@ func (f *Fpdf) putcatalog() {
 		//	-> Javascript
 		//	-> Embedded files
 		var embedData []string = []string{}
+		var haveAtts bool = false
 		if(len(f.attachments) > 0) {
 			var eFiles string = smart.StrTrimWhitespaces(f.getEmbeddedFiles())
 			if(eFiles != "") {
 				embedData = append(embedData, smart.StrTrimWhitespaces(fmt.Sprintf("/EmbeddedFiles %s", eFiles)))
+				haveAtts = true
 			} //end if
 		} //end if
 		// JavaScript
@@ -5079,8 +5150,17 @@ func (f *Fpdf) putcatalog() {
 		} //end if
 		if(len(embedData) > 0) {
 			f.outf("/Names << %s >>", smart.StrTrimWhitespaces(smart.Implode(" ", embedData)))
+			if(haveAtts) {
+				if len(f.outlines) <= 0 {
+					f.outf("/PageMode /UseAttachments") // unixman: inspired from FPDF-PHP, open attachments pannel
+				}
+			}
 		} //end if
 	} //end if
+	//--
+	if(f.allowPrintScale != true) { // unixman: disable print scaling
+		f.out("/ViewerPreferences [/PrintScaling/None]")
+	}
 	//-- #
 }
 

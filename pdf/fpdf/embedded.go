@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20241215.1258
+// v.20260208.1258
 // (c) unix-world.org
 // license: BSD
 
@@ -27,24 +27,32 @@ package fpdf
 // Embedded standard fonts
 
 import (
-	"embed"
+//	"embed"
 	"io"
 //	"strings"
 
 	smart "github.com/unix-world/smartgo"
 )
 
-//go:embed font_embed/*.json font_embed/*.map
-var embFS embed.FS
+//-- unixman: comment out embed fonts because will be using just unicode fonts ...
+//#go:embed font_embed/*.json font_embed/*.map
+//-- #
+//var embFS embed.FS
 
 func (f *Fpdf) coreFontReader(familyStr, styleStr string) (r io.ReadCloser) {
+	//-- unixman: disable embed core fonts ... {{{SYNC-FPDF-DISABLE-CORE-FONTS}}}
 	key := familyStr + styleStr
 	key = smart.StrToLower(key)
+	f.SetErrorf("core fonts are unsupported: \"%s\"", key)
+	//--
+	/*
 	emb, err := embFS.Open("font_embed/" + key + ".json")
 	if err == nil {
 		r = emb
 	} else {
 		f.SetErrorf("could not locate \"%s\" among embedded core font definition files", key)
 	}
+	*/
+	//--
 	return
 }

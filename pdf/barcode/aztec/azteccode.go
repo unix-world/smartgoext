@@ -18,7 +18,7 @@ type aztecCode struct {
 
 func newAztecCode(size int, color barcode.ColorScheme) *aztecCode {
 //	return &aztecCode{utils.NewBitList(size * size), size, nil, barcode.ColorScheme16}
-	return &aztecCode{utils.NewBitList(size * size), size, nil, color} // fix by unixman
+	return &aztecCode{utils.NewBitList(size * size), size, nil, color} // fix by unixman (bug)
 }
 
 func (c *aztecCode) Content() string {
@@ -26,7 +26,8 @@ func (c *aztecCode) Content() string {
 }
 
 func (c *aztecCode) Metadata() barcode.Metadata {
-	return barcode.Metadata{barcode.TypeAztec, 2}
+//	return barcode.Metadata{barcode.TypeAztec, 2}
+	return barcode.Metadata{CodeKind: barcode.TypeAztec, Dimensions: 2} // fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
 }
 
 func (c *aztecCode) ColorModel() color.Model {

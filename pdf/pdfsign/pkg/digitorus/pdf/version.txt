@@ -1,0 +1,4 @@
+github.com/digitorus/pdf @head.20220308
+
+go 1.17
+

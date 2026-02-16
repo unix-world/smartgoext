@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2020-present unix-world.org
-// r.20260114.2358 :: STABLE
+// r.20260216.2358 :: STABLE
 // [ XML ]
 
 // REQUIRE: go 1.19 or later
@@ -38,12 +38,37 @@ func XmlConvertToJson(xmlData string) (string, error) {
 //-----
 
 
+func NormalizeXmlSingleLineValue(str string) string {
+	//--
+	return smart.StrTrimWhitespaces(smart.StrNormalizeSpaces(str))
+	//--
+} //END FUNCTION
+
+
+func NormalizeXmlSingleLineNoSpaceValue(str string) string {
+	//--
+	return smart.StrTrimWhitespaces(smart.StrTr(NormalizeXmlSingleLineValue(str), map[string]string{" ":""}))
+	//--
+} //END FUNCTION
+
+
+func NormalizeXmlMultiLineValue(str string) string {
+	//--
+	return smart.StrTrimWhitespaces(smart.StrTr(NormalizeXmlSingleLineValue(str), map[string]string{" ":"\n"}))
+	//--
+} //END FUNCTION
+
+
+//-----
+
+
 func XmlC14NCanonize(xmlData string, subPath string, subNs string, withComments bool, oneLine bool) (error, string) {
 	//--
 	// transform mode: "C14N10Exc"
 	//--
 	defer smart.PanicHandler() // for XML Parser
 	//--
+	xmlData = smart.StrTrimWhitespaces(xmlData) // bug fix for: etree: invalid XML format, does not support extra LF after XML ends ; anyway trim both sides, is safer ; {{{SYNC-ETREE-XML-NEWLINE-AT-END-NOT-SUPPORTED}}}
 	if(xmlData == "") {
 		return nil, ""
 	} //end if

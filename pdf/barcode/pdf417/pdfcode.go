@@ -16,7 +16,10 @@ type pdfBarcode struct {
 }
 
 func (c *pdfBarcode) Metadata() barcode.Metadata {
-	return barcode.Metadata{barcode.TypePDF, 2}
+	//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+//	return barcode.Metadata{barcode.TypePDF, 2}
+	return barcode.Metadata{CodeKind: barcode.TypePDF, Dimensions: 2}
+	//-- #
 }
 
 func (c *pdfBarcode) Content() string {

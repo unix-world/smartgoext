@@ -176,7 +176,10 @@ func iterateModules(occupied *qrcode) <-chan image.Point {
 		curY := occupied.dimension - 1
 		isUpward := true
 
-		for true {
+		//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+	//	for true {
+		for {
+		//-- #
 			if isUpward {
 				allPoints <- image.Pt(curX, curY)
 				allPoints <- image.Pt(curX-1, curY)

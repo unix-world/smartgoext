@@ -1,4 +1,4 @@
-# github.com/unix-world/smartgo v0.0.0-20251229081236-495086133dc7
+# github.com/unix-world/smartgo v0.0.0
 ## explicit; go 1.22
 github.com/unix-world/smartgo
 github.com/unix-world/smartgo/baseconv
@@ -23,6 +23,7 @@ github.com/unix-world/smartgo/crypto/signify
 github.com/unix-world/smartgo/crypto/threefish
 github.com/unix-world/smartgo/crypto/twofish
 github.com/unix-world/smartgo/crypto/uuid
+github.com/unix-world/smartgo/crypto/x509-inspect
 github.com/unix-world/smartgo/data-structs/fastjson
 github.com/unix-world/smartgo/data-structs/fastjson/fastfloat
 github.com/unix-world/smartgo/data-structs/parseini
@@ -45,23 +46,22 @@ github.com/unix-world/smartgo/textproc/regexp2/syntax
 github.com/unix-world/smartgo/ui/colorstring
 github.com/unix-world/smartgo/utils/log-utils
 github.com/unix-world/smartgo/utils/mail
-# golang.org/x/crypto v0.46.0
-## explicit; go 1.24.0
+# golang.org/x/crypto v0.48.0
+## explicit; go 1.22
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/ocsp
-# golang.org/x/image v0.34.0
-## explicit; go 1.24.0
+# golang.org/x/image v0.36.0
+## explicit; go 1.22
 golang.org/x/image/ccitt
 golang.org/x/image/tiff
 golang.org/x/image/tiff/lzw
 # golang.org/x/sync v0.19.0
-## explicit; go 1.24.0
+## explicit; go 1.22
 golang.org/x/sync/errgroup
 golang.org/x/sync/singleflight
-golang.org/x/sync/syncmap
-# golang.org/x/text v0.33.0
-## explicit; go 1.24.0
+# golang.org/x/text v0.34.0
+## explicit; go 1.22
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex

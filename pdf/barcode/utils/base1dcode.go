@@ -25,7 +25,10 @@ func (c *base1DCode) Content() string {
 }
 
 func (c *base1DCode) Metadata() barcode.Metadata {
-	return barcode.Metadata{c.kind, 1}
+	//-- fix by unixman, from upstream, 20250723 @ ea5ac7e13561f6334938261321e13a725d1c0180
+//	return barcode.Metadata{c.kind, 1}
+	return barcode.Metadata{CodeKind: c.kind, Dimensions: 1}
+	//-- #
 }
 
 func (c *base1DCode) ColorModel() color.Model {

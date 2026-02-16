@@ -1,0 +1,10 @@
+github.com/ConradIrwin/font
+
+go 1.22
+
+require
+    golang.org/x/text
+
+modified by unixman: subset, disabled: Woff/Woff2 ; Extra Character Set fonts support, except Unicode, Latin1 and ASCII
+
+

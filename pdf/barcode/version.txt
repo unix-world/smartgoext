@@ -1,4 +1,4 @@
-github.com/boombuler/barcode @head.20250224
+github.com/boombuler/barcode @head.20260201 # up-to-date @ 3c3de55b6b64c2a9d5a0c96f2e3ebceaef576986
 
 go 1.17
 

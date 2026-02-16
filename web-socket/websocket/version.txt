@@ -1,0 +1,4 @@
+golang.org/x/net/websocket @v0.50.0
+
+go 1.22
+

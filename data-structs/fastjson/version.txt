@@ -1,0 +1,11 @@
+v1.6.4 @ 20221229 # r.20241120
+
+Go 1.12 or later
+
+github.com/valyala/fastjson
+
+# refactored by unixman as:
+github.com/unix-world/smartgo/fastjson
+
+# modified by unixman:
+added 2 new methods: GetScalarAsString(), ScalarAsString()

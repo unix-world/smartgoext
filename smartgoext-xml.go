@@ -1,10 +1,10 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
-// (c) 2020-present unix-world.org
-// r.20260216.2358 :: STABLE
+// (c) 2021-present, unix-world.org
+// r.20260805.2358 :: STABLE
 // [ XML ]
 
-// REQUIRE: go 1.19 or later
+// REQUIRE: go 1.22 or later
 package smartgoext
 
 import (

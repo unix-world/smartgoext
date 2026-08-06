@@ -1,0 +1,4 @@
+based on source from go 1.24.13
+
+modified by unixman to force using tarinsecurepath @ r.20260221
+

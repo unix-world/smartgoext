@@ -10,13 +10,14 @@
 
 package v4
 
+// contains fixes by unixman
+
 import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -150,7 +151,7 @@ func (v4 Signer) signWithBody(r *http.Request, body io.ReadSeeker, service, regi
 	if body != nil {
 		var ok bool
 		if reader, ok = body.(io.ReadCloser); !ok {
-			reader = ioutil.NopCloser(body)
+			reader = io.NopCloser(body) // unixman use io instead of io-util
 		}
 	}
 	r.Body = reader

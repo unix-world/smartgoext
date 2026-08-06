@@ -22,12 +22,12 @@ package fpdf
 
 // contains fixes by unixman
 
-// v.20260208.2358
+// v.20260805.2358
 // (c) 2023-present unix-world.org
 // license: BSD
 
 // Version: 1.7
-// Date:    2011-06-18
+// Date:    2011-06-18 # upstream fixes from 2026-08-04
 // Author:  Olivier PLATHEY
 // Port to Go: Kurt Jung, 2013-07-15
 
@@ -170,6 +170,7 @@ func fpdfNew(orientationStr, unitStr, sizeStr, fontDirStr string, size SizeType)
 	f.stdPageSizes["a5"] = SizeType{420.94, 595.28}
 	f.stdPageSizes["a6"] = SizeType{297.64, 420.94}
 	f.stdPageSizes["a7"] = SizeType{209.76, 297.64}
+	f.stdPageSizes["a8"] = SizeType{147.40, 209.76} // unixman, fix from upstream: e385a90b31d75024bf780bb156e302217b4e6c41
 	f.stdPageSizes["a2"] = SizeType{1190.55, 1683.78}
 	f.stdPageSizes["a1"] = SizeType{1683.78, 2383.94}
 	f.stdPageSizes["letter"] = SizeType{612, 792}
@@ -266,7 +267,7 @@ func NewCustom(init *InitType) (f *Fpdf) {
 // string will be replaced with "mm".
 //
 // sizeStr specifies the page size. Acceptable values are "A1", "A2", "A3", "A4", "A5",
-// "A6", "A7", "Letter", "Legal", or "Tabloid". An empty string will be replaced with "A4".
+// "A6", "A7", "A8", "Letter", "Legal", or "Tabloid". An empty string will be replaced with "A4".
 //
 // fontDirStr specifies the file system location in which font resources will
 // be found. An empty string is replaced with ".". This argument only needs to
@@ -2785,7 +2786,9 @@ func (f *Fpdf) CellFormat(w, h float64, txtStr, borderStr string, ln int,
 			s.printf("q %s ", f.color.text.str)
 		}
 		//If multibyte, Tw has no effect - do word spacing using an adjustment before each space
-		if (f.ws != 0 || alignStr == "J") && f.isCurrentUTF8 { // && f.ws != 0
+	//	if (f.ws != 0 || alignStr == "J") && f.isCurrentUTF8 { // && f.ws != 0
+	//	if (f.ws != 0 || strings.Contains(alignStr, "J")) && f.isCurrentUTF8 { // && f.ws != 0 // unixman: fix from upstream, handle other alignments alongside "J" in UTF8 CellFormat # 49f5a634f68ed118e85370ab626da62e4588b43d
+		if (f.ws != 0 || smart.StrContains(alignStr, "J")) && f.isCurrentUTF8 { // && f.ws != 0 // + smart unixman: fix from upstream, handle other alignments alongside "J" in UTF8 CellFormat # 49f5a634f68ed118e85370ab626da62e4588b43d
 			if f.isRTL {
 				txtStr = reverseText(txtStr)
 			}
@@ -2795,7 +2798,8 @@ func (f *Fpdf) CellFormat(w, h float64, txtStr, borderStr string, ln int,
 			}
 			space := f.escape(utf8toutf16(" ", false))
 			strSize := f.GetStringSymbolWidth(txtStr)
-			s.printf("BT 0 Tw %.2f %.2f Td [", (f.x+dx)*k, (f.h-(f.y+.5*h+.3*f.fontSize))*k)
+		//	s.printf("BT 0 Tw %.2f %.2f Td [", (f.x+dx)*k, (f.h-(f.y+.5*h+.3*f.fontSize))*k)
+			s.printf("BT 0 Tw %.2f %.2f Td [", (f.x+dx)*k, (f.h-(f.y+dy+.5*h+.3*f.fontSize))*k) // unixman: fix from upstream, handle other alignments alongside "J" in UTF8 CellFormat # 49f5a634f68ed118e85370ab626da62e4588b43d
 			t := smart.Explode(" ", txtStr)
 			shift := float64((wmax - strSize)) / float64(len(t)-1)
 			numt := len(t)

@@ -1,5 +1,7 @@
 package fpdi
 
+// contains fixes by unixman
+
 import (
 	"bufio"
 	"bytes"
@@ -7,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
@@ -981,9 +982,9 @@ func (this *PdfReader) readXref() error {
 					}
 					defer z.Close()
 
-					p, err := ioutil.ReadAll(z)
+					p, err := io.ReadAll(z) // unixman use io instead of io-util
 					if err != nil {
-						return errors.Wrap(err, "ioutil.ReadAll error")
+						return errors.Wrap(err, "io.ReadAll error")
 					}
 
 					objPos := 0

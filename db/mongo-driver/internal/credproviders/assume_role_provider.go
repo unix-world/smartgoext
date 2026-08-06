@@ -6,12 +6,14 @@
 
 package credproviders
 
+// contains fixes by unixman
+
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"net/http"
 	"time"
 
@@ -74,7 +76,7 @@ func (a *AssumeRoleProvider) RetrieveWithContext(ctx context.Context) (credentia
 	if tokenFile == "" && roleArn != "" {
 		return v, errors.New("AWS_ROLE_ARN is set, but AWS_WEB_IDENTITY_TOKEN_FILE is missing")
 	}
-	token, err := ioutil.ReadFile(tokenFile)
+	token, err := os.ReadFile(tokenFile) // unixman use os instead of io-util
 	if err != nil {
 		return v, err
 	}

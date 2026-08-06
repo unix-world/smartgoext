@@ -1,7 +1,9 @@
 package dbf
 
+// contains fixes by unixman
+
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +23,7 @@ func readFile(filename string) ([]byte, []byte, error) {
 	}
 	defer f.Close()
 
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f) // unixman use io instead of io-util
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +44,7 @@ func readFile(filename string) ([]byte, []byte, error) {
 			return nil, nil, err
 		}
 
-		memo, err = ioutil.ReadAll(dbtFile)
+		memo, err = io.ReadAll(dbtFile) // unixman use io instead of io-util
 		if err != nil {
 			return nil, nil, err
 		}

@@ -2,12 +2,15 @@
 
 package sqlx
 
+// contains fixes by unixman
+
 import (
+	"fmt"
 	"context"
 	"database/sql"
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
+	"os"
+
 	"reflect"
 )
 
@@ -99,7 +102,7 @@ func LoadFileContext(ctx context.Context, e ExecerContext, path string) (*sql.Re
 	if err != nil {
 		return nil, err
 	}
-	contents, err := ioutil.ReadFile(realpath)
+	contents, err := os.ReadFile(realpath) // unixman use os instead of io-util
 	if err != nil {
 		return nil, err
 	}

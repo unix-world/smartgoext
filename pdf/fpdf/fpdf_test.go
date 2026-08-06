@@ -22,7 +22,7 @@ package fpdf_test
 
 // contains fixes by unixman
 
-// v.20251203.2358
+// v.20260805.2358
 // (c) 2023-present unix-world.org
 // license: BSD
 
@@ -329,5 +329,53 @@ func BenchmarkCurveTo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pdf.CurveTo(190, 100, 105, 100)
+	}
+}
+
+func TestIssue104CellFormatJustifiedVerticalAlign(t *testing.T) { // unixman: fix from upstream, handle other alignments alongside "J" in UTF8 CellFormat # 49f5a634f68ed118e85370ab626da62e4588b43d
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+
+	// force a UTF8 font...
+	pdf.AddUTF8Font("DejaVu", "", "./font/DejaVuSansCondensed.ttf")
+	if pdf.Error() != nil {
+		t.Fatalf("unable to load UTF8 font")
+	}
+
+	pdf.SetFont("DejaVu", "", 10)
+
+	pdf.CellFormat(100, 10, "This is justified-baseline text.", "", 0, "JA", false, 0, "")
+	if pdf.Error() != nil {
+		t.Fatalf("not expecting error when rendering text")
+	}
+
+	// If we didn't get justified text, the PDF output will contain:
+	//
+	//   BT 31.19 785.17 Td (This is justified-baseline text.)Tj ET
+	//
+	// If it *is* justified, we'll get placement of individual words:
+	//
+	//   BT 0 Tw 31.19 796.37 Td [(This) -4870.000( ) (is) -4870.000( ) (justified-baseline) -4870.000( ) (text.) ] TJ ET
+	//
+	// We don't need to look for exact positioning, we just need to look for the
+	// indication that each word is positioned.
+	w := &bytes.Buffer{}
+	if err := pdf.Output(w); err != nil {
+		t.Errorf("unexpected err: %s", err)
+	}
+
+	// I'm having a weird problem where the pattern matches through:
+	//
+	//   BT 0 Tw 31.19 796.37 Td [(
+	//
+	// ... but as soon as I include "This", it fails to match! Fortunately, the
+	// leading instructions ("BT 0 Tw...") are unique enough to let us know
+	// we're getting to the correct codepath.
+
+	// pattern := regexp.MustCompile(`\nBT 0 Tw .* Td \[\(This\) .* \(is\) .* \(justified-baseline\) .* \(text.\) ] TJ ET\n`)
+	pattern := regexp.MustCompile(`\bBT 0 Tw .* Td \[\(`)
+
+	if !pattern.MatchReader(w) {
+		t.Fatal("unable to find justified text in PDF output")
 	}
 }

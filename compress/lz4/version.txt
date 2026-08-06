@@ -1,0 +1,6 @@
+github.com/pierrec/lz4/v4 # v4.1.25 @head.20260222
+
+go 1.17
+
+refactored by unixman as: github.com/unix-world/smartgoext/compress/lz4 @ r.20260224
+

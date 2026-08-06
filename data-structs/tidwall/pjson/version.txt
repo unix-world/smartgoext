@@ -1,0 +1,8 @@
+github.com/tidwall/pjson @head.20231212
+
+go 1.15
+
+require:
+	tidwall/lotsa
+	tidwall/pretty
+

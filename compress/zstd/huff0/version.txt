@@ -1,0 +1,4 @@
+github.com/klauspost/compress/huff0 @head.20260223
+
+go 1.23
+

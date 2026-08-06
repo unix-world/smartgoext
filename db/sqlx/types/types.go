@@ -1,13 +1,16 @@
 package types
 
+// contains fixes by unixman
+
 import (
+	"errors"
 	"bytes"
-	"compress/gzip"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"io"
 
-	"io/ioutil"
+//	"compress/gzip"
+	"github.com/unix-world/smartgo/compress/gzip"
 )
 
 // GzippedText is a []byte which transparently gzips data being submitted to
@@ -43,7 +46,7 @@ func (g *GzippedText) Scan(src interface{}) error {
 		return err
 	}
 	defer reader.Close()
-	b, err := ioutil.ReadAll(reader)
+	b, err := io.ReadAll(reader) // unixman use io instead of io-util
 	if err != nil {
 		return err
 	}

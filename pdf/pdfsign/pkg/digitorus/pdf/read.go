@@ -60,6 +60,8 @@ package pdf
 // BUG(rsc): The Value API does not support error reporting. The intent is to allow users to
 // set an error reporting callback in Reader, but that code has not been implemented.
 
+// contains fixes by unixman
+
 import (
 	"bytes"
 	"compress/zlib"
@@ -69,7 +71,6 @@ import (
 	"crypto/rc4"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -972,7 +973,7 @@ func (v Value) Reader() io.ReadCloser {
 		}
 	}
 
-	return ioutil.NopCloser(rd)
+	return io.NopCloser(rd) // unixman use io instead of io-util
 }
 
 func applyFilter(rd io.Reader, name string, param Value) io.Reader {

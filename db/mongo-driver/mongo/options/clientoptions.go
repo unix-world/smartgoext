@@ -6,6 +6,8 @@
 
 package options
 
+// contains fixes by unixman
+
 import (
 	"bytes"
 	"context"
@@ -14,7 +16,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"math"
 	"net"
 	"net/http"
@@ -1215,7 +1217,7 @@ func MergeClientOptions(opts ...*ClientOptions) *ClientOptions {
 // addCACertFromFile adds a root CA certificate to the configuration given a path
 // to the containing file.
 func addCACertFromFile(cfg *tls.Config, file string) error {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file) // unixman use os instead of io-util
 	if err != nil {
 		return err
 	}
@@ -1231,11 +1233,11 @@ func addCACertFromFile(cfg *tls.Config, file string) error {
 }
 
 func addClientCertFromSeparateFiles(cfg *tls.Config, keyFile, certFile, keyPassword string) (string, error) {
-	keyData, err := ioutil.ReadFile(keyFile)
+	keyData, err := os.ReadFile(keyFile) // unixman use os instead of io-util
 	if err != nil {
 		return "", err
 	}
-	certData, err := ioutil.ReadFile(certFile)
+	certData, err := os.ReadFile(certFile) // unixman use os instead of io-util
 	if err != nil {
 		return "", err
 	}
@@ -1260,7 +1262,7 @@ func addClientCertFromSeparateFiles(cfg *tls.Config, keyFile, certFile, keyPassw
 }
 
 func addClientCertFromConcatenatedFile(cfg *tls.Config, certKeyFile, keyPassword string) (string, error) {
-	data, err := ioutil.ReadFile(certKeyFile)
+	data, err := os.ReadFile(certKeyFile) // unixman use os instead of io-util
 	if err != nil {
 		return "", err
 	}

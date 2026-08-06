@@ -1,0 +1,6 @@
+github.com/ulikunitz/xz v0.5.15 @ head.20260217
+
+go 1.12
+
+refactored by unixman as: github.com/unix-world/smartgoext/compress/xz @ r.20260217
+

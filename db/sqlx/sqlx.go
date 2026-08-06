@@ -1,17 +1,21 @@
 package sqlx
 
+// contains fixes by unixman
+
 import (
+	"fmt"
+	"errors"
+
 	"database/sql"
 	"database/sql/driver"
-	"errors"
-	"fmt"
 
-	"io/ioutil"
-	"path/filepath"
-	"reflect"
 	"strings"
+
+	"path/filepath"
+	"os"
 	"sync"
 
+	"reflect"
 	"github.com/unix-world/smartgoext/db/sqlx/reflectx"
 )
 
@@ -706,7 +710,7 @@ func LoadFile(e Execer, path string) (*sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	contents, err := ioutil.ReadFile(realpath)
+	contents, err := os.ReadFile(realpath) // unixman use os instead of io-util
 	if err != nil {
 		return nil, err
 	}

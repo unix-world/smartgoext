@@ -7,3 +7,8 @@ require
 	github.com/lib/pq
 	github.com/go-sql-driver/mysql
 
+contains fixes by unixman: # r.20260224
+	* unixman use io, os instead of io-util
+
+extra:
+	* imports: "github.com/unix-world/smartgo/compress/gzip" instead of "compress/gzip"

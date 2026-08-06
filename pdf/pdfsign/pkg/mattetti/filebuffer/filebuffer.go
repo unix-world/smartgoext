@@ -9,11 +9,12 @@
 // * Closer
 package filebuffer
 
+// contains fixes by unixman
+
 import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -37,7 +38,7 @@ func New(b []byte) *Buffer {
 // whose contents are sourced from a supplied reader by loading it entirely
 // into memory.
 func NewFromReader(reader io.Reader) (*Buffer, error) {
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader) // unixman use io instead of io-util
 	if err != nil {
 		return nil, err
 	}

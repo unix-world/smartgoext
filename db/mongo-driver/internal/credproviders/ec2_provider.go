@@ -6,12 +6,14 @@
 
 package credproviders
 
+// contains fixes by unixman
+
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -69,7 +71,7 @@ func (e *EC2Provider) getToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("%s %s failed: %s", req.Method, req.URL.String(), resp.Status)
 	}
 
-	token, err := ioutil.ReadAll(resp.Body)
+	token, err := io.ReadAll(resp.Body) // unixman use io instead of io-util
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +99,7 @@ func (e *EC2Provider) getRoleName(ctx context.Context, token string) (string, er
 		return "", fmt.Errorf("%s %s failed: %s", req.Method, req.URL.String(), resp.Status)
 	}
 
-	role, err := ioutil.ReadAll(resp.Body)
+	role, err := io.ReadAll(resp.Body) // unixman use io instead of io-util
 	if err != nil {
 		return "", err
 	}

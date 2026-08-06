@@ -1,0 +1,5 @@
+github.com/wader/ydls/internal/timerange @head.20260221
+
+go 1.24
+
+

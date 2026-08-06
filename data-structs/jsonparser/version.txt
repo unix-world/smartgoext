@@ -1,4 +1,0 @@
-github.com/buger/jsonparser @head.20240101
-
-go 1.13
-

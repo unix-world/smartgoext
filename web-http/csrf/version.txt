@@ -1,6 +1,0 @@
-v1.7.2 @head.20241215
-github.com/gorilla/csrf
-
-@require
-	github.com/gorilla/securecookie
-

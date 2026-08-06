@@ -6,12 +6,14 @@
 
 package creds
 
+// contains fixes by unixman
+
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"io"
 	"os"
 
 	"github.com/unix-world/smartgoext/db/mongo-driver/x/bsonx/bsoncore"
@@ -44,7 +46,7 @@ func (p GCPCredentialProvider) GetCredentialsDoc(ctx context.Context) (bsoncore.
 		return nil, fmt.Errorf("unable to retrieve GCP credentials: %w", err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // unixman use io instead of io-util
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve GCP credentials: error reading response body: %w", err)
 	}

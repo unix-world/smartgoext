@@ -1,0 +1,6 @@
+github.com/rusjoan/streamcrypt @head.20260222
+
+go 1.24
+
+modified by unixman, r.20260223
+

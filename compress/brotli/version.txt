@@ -1,0 +1,8 @@
+github.com/andybalholm/brotli @head.20260223
+
+go 1.22
+
+refactored by unixman as: github.com/unix-world/smartgoext/compress/brotli @ r.20260224
+extra:
+	* imports: "github.com/unix-world/smartgo/compress/gzip" instead of "compress/gzip"
+

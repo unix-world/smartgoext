@@ -1,0 +1,8 @@
+github.com/tidwall/sjson @head.20231212
+
+go 1.14
+
+require:
+	tidwall/gjson
+	tidwall/pretty
+

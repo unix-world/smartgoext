@@ -1,0 +1,7 @@
+github.com/tidwall/expr @head.20231212
+
+go 1.18
+
+require:
+	tidwall/conv
+

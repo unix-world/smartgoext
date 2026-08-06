@@ -3,9 +3,11 @@
 // license that can be found in the LICENSE file.
 //
 
+// Multipart is defined in RFC 2046.
+
 package textproto
 
-// Multipart is defined in RFC 2046.
+// contains fixes by unixman
 
 import (
 	"bufio"
@@ -14,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 )
 
 var emptyParams = make(map[string]string)
@@ -218,7 +219,7 @@ func matchAfterPrefix(buf, prefix []byte, readErr error) int {
 }
 
 func (p *Part) Close() error {
-	io.Copy(ioutil.Discard, p)
+	io.Copy(io.Discard, p) // unixman use io instead of io-util
 	return nil
 }
 

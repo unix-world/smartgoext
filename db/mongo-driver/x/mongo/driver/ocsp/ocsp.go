@@ -13,6 +13,8 @@
 // NOTICE! USE WITH EXTREME CAUTION!
 package ocsp
 
+// contains fixes by unixman
+
 import (
 	"bytes"
 	"context"
@@ -22,7 +24,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"time"
@@ -259,7 +261,7 @@ func contactResponders(ctx context.Context, cfg config) *ResponseDetails {
 				return nil
 			}
 
-			httpBytes, err := ioutil.ReadAll(httpResponse.Body)
+			httpBytes, err := io.ReadAll(httpResponse.Body) // unixman use io instead of io-util
 			if err != nil {
 				return nil
 			}

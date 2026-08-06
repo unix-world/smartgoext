@@ -6,11 +6,13 @@
 
 package credproviders
 
+// contains fixes by unixman
+
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -60,7 +62,7 @@ func (a *AzureProvider) RetrieveWithContext(ctx context.Context) (credentials.Va
 		return v, fmt.Errorf("unable to retrieve Azure credentials: %w", err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // unixman use io instead of io-util
 	if err != nil {
 		return v, fmt.Errorf("unable to retrieve Azure credentials: error reading response body: %w", err)
 	}

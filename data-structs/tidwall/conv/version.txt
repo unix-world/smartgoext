@@ -1,0 +1,3 @@
+github.com/tidwall/conv @head.20231212
+
+go 1.19

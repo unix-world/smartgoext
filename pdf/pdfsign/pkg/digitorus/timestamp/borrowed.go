@@ -5,7 +5,7 @@ import (
 	"encoding/asn1"
 )
 
-// TODO(vanbroup): taken from "golang.org/x/crypto/ocsp"
+// TODO(vanbroup): taken from "golang.org / x / crypto / ocsp"
 // use directly from crypto/x509 when exported as suggested below.
 
 var hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{

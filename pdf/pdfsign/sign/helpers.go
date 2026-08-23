@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/unicode"
+	"github.com/unix-world/smartgoext/x/golang.org/text/transform"
 
 //	"github.com/digitorus/pdf"
 	"github.com/unix-world/smartgoext/pdf/pdfsign/pkg/digitorus/pdf"

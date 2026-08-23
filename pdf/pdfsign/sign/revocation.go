@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"golang.org/x/crypto/ocsp"
+//	"golang.org/x/crypto/ocsp"
+	"github.com/unix-world/smartgo/crypto/ocsp"
 
 //	"github.com/digitorus/pdfsign/revocation"
 	"github.com/unix-world/smartgoext/pdf/pdfsign/revocation"

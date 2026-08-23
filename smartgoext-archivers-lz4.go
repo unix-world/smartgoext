@@ -1,7 +1,7 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2021-present, unix-world.org
-// r.20260805.2358 :: STABLE
+// r.20260823.2358 :: STABLE
 // [ ARCHIVERS / LZ4 ]
 
 // REQUIRE: go 1.22 or later
@@ -371,7 +371,7 @@ func TarLz4StreamCompressDir(srcDir string, allowAbsolutePath bool, concurrency 
 	pipeR, pipeW := io.Pipe()
 	//--
 	go func() {
-		errTar := TarStreamCompressDir(srcDir, allowAbsolutePath, pipeW)
+		errTar := smart.TarStreamCompressDir(srcDir, allowAbsolutePath, pipeW)
 		if(errTar != nil) {
 			errChan <- smart.NewError("Tar Stream Compress Dir Failed: " + errTar.Error()) // #1
 			return
@@ -421,7 +421,7 @@ func TarLz4StreamUncompressDir(dstDir string, allowAbsolutePath bool, rdStream i
 		return
 	}()
 	//--
-	errTar := TarStreamUncompressDir(dstDir, allowAbsolutePath, pipeR, preserveFileChmod)
+	errTar := smart.TarStreamUncompressDir(dstDir, allowAbsolutePath, pipeR, preserveFileChmod)
 	if(errTar != nil) {
 		return smart.NewError("Tar Stream Uncompress Dir Failed: " + errTar.Error())
 	} //end if

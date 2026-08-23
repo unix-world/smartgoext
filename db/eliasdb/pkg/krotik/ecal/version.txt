@@ -1,0 +1,12 @@
+github.com/krotik/ecal @ v.1.6.3 # @head.20260818
+
+contains fixes by unixman from upstream:
+	* 1a5bf4c77f8973c468f0b5edf47ecb4779da6143: 'fix: Return statements can be empty'
+
+contains fixes by unixman: ioutil deprecations
+
+go 1.12
+
+require:
+	github.com/krotik/common
+

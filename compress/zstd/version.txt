@@ -1,6 +1,0 @@
-github.com/klauspost/compress/zstd @head.20260223
-
-go 1.23
-
-refactored by unixman as: github.com/unix-world/smartgoext/compress/zstd @ r.20260217
-

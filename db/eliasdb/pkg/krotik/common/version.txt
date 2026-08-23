@@ -1,0 +1,6 @@
+github.com/krotik/common @ v.1.5.1 # @head.20260818
+
+go 1.12
+
+contains fixes by unixman: ioutil deprecations, fixed
+

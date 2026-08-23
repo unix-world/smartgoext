@@ -1,0 +1,24 @@
+github.com/unix-world/smartgoext/db/eliasdb @ v.1.4.0 #head@20260817
+
+go 1.24
+
+# contains fixes by unixman v.1.4.0.1 # r.20260823.2358 in:
+	* eliasdb
+	* eliasdb/pkg/krotik
+
+# contains fixes by unixman:
+	* ioutil deprecations
+	* fixes for high concurrency lockfile
+
+# EliasDB is a graph-based database which aims to provide a lightweight solution for projects which want to store their data as a graph.
+
+## build:
+    $ go build ./cli/eliasdb.go
+
+## start server, 127.0.0.1:9090
+    $ ./eliasdb server
+
+## graphiql route: https://127.0.0.1:9090/db/v1/graphql/main
+
+## see the docs for more ...
+

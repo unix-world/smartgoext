@@ -1,0 +1,4 @@
+v.20260216
+Go 1.22 or later
+
+github.com/unix-world/smartgoext/x/golang.org/text v0.34.0

@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// v.20241215.1258
+// v.20260823.2358
 // (c) unix-world.org
 // license: BSD
 
@@ -31,7 +31,8 @@ import (
 	"os"
 
 	"github.com/unix-world/smartgoext/pdf/fpdf"
-	"golang.org/x/image/tiff"
+
+	"github.com/unix-world/smartgoext/utils/image/tiff"
 )
 
 // RegisterReader registers a TIFF image, adding it to the PDF file but not

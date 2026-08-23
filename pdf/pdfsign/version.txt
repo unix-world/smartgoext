@@ -10,7 +10,7 @@ require:
 	golang.org/x/crypto
 	golang.org/x/text
 
-contains fixes and modifications, by unixman, r.20260214
+contains fixes and modifications, by unixman, r.20260823
     * default algo set to SHA384
     * bug fix: if TSA URL was empty, the sign by certificate expanding was except from 9000
     * verify: fixed to work, in the original package this is failing ...

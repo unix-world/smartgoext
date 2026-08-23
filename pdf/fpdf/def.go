@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// v.20260805.2358
+// v.20260823.2358
 // (c) 2023-present unix-world.org
 // license: BSD
 
@@ -39,7 +39,7 @@ import (
 
 // Version of FPDF from which this package is derived
 const (
-	cnFpdfVersion = "1.7.1.20260805"
+	cnFpdfVersion = "1.7.1.20260823"
 )
 
 type blendModeType struct {

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/crypto/ocsp"
+//	"golang.org/x/crypto/ocsp"
+	"github.com/unix-world/smartgo/crypto/ocsp"
 
 //	"github.com/digitorus/pkcs7"
 	"github.com/unix-world/smartgoext/crypto/pkcs7"

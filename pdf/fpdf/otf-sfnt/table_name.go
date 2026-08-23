@@ -6,9 +6,9 @@ import (
 	"io"
 	"strconv"
 
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/charmap"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/unicode"
+	"github.com/unix-world/smartgoext/x/golang.org/text/transform"
 )
 
 // TableName represents the OpenType 'name' table. This contains

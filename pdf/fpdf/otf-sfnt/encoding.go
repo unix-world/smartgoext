@@ -3,13 +3,13 @@ package sfnt
 import (
 	"strconv"
 
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
-//	"golang.org/x/text/encoding/japanese"
-//	"golang.org/x/text/encoding/korean"
-//	"golang.org/x/text/encoding/simplifiedchinese"
-//	"golang.org/x/text/encoding/traditionalchinese"
-	"golang.org/x/text/encoding/unicode"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/charmap"
+//	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/japanese"
+//	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/korean"
+//	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/simplifiedchinese"
+//	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/traditionalchinese"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/unicode"
 
 //	"github.com/go-sw/text-codec/apple"
 //	johab "github.com/go-sw/text-codec/korean"

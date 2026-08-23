@@ -45,7 +45,7 @@ func (r *InfoArchival) IsRevoked(c *x509.Certificate) bool {
 type CRL []asn1.RawValue
 
 // OCSP contains the raw bytes of an OCSP response and can be parsed with
-// x/crypto/ocsp.ParseResponse.
+// x / crypto / ocsp.ParseResponse.
 type OCSP []asn1.RawValue
 
 // ANS.1 Object OtherRevInfo.

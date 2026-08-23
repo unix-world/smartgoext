@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/crypto/ocsp"
+//	"golang.org/x/crypto/ocsp"
+	"github.com/unix-world/smartgo/crypto/ocsp"
 
 //	"github.com/digitorus/timestamp"
 	"github.com/unix-world/smartgoext/pdf/pdfsign/pkg/digitorus/timestamp"

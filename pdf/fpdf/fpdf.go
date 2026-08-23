@@ -22,7 +22,7 @@ package fpdf
 
 // contains fixes by unixman
 
-// v.20260805.2358
+// v.20260823.2358
 // (c) 2023-present unix-world.org
 // license: BSD
 

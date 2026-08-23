@@ -1,4 +1,0 @@
-github.com/klauspost/compress/fse @head.20260223
-
-go 1.23
-

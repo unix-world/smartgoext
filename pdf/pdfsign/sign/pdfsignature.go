@@ -13,8 +13,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"golang.org/x/crypto/cryptobyte"
-	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
+//	"golang.org/x/crypto/cryptobyte"
+	"github.com/unix-world/smartgoext/crypto/cryptobyte"
+
+//	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
+	cryptobyte_asn1 "github.com/unix-world/smartgoext/crypto/cryptobyte/asn1"
 
 //	"github.com/digitorus/pkcs7"
 	"github.com/unix-world/smartgoext/crypto/pkcs7"

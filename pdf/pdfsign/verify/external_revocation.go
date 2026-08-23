@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/crypto/ocsp"
+//	"golang.org/x/crypto/ocsp"
+	"github.com/unix-world/smartgo/crypto/ocsp"
 )
 
 // OCSPRequestFunc allows mocking OCSP request creation for tests

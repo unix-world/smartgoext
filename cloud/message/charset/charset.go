@@ -11,11 +11,11 @@ import (
 
 	"github.com/unix-world/smartgoext/cloud/message"
 
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/htmlindex"
-	"golang.org/x/text/encoding/ianaindex"
-	"golang.org/x/text/encoding/unicode"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/charmap"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/htmlindex"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/ianaindex"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/unicode"
 )
 
 // Quirks table for charsets not handled by ianaindex

@@ -16,10 +16,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/htmlindex"
-	"golang.org/x/text/transform"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/charmap"
+	"github.com/unix-world/smartgoext/x/golang.org/text/encoding/htmlindex"
+	"github.com/unix-world/smartgoext/x/golang.org/text/transform"
 
 	"github.com/unix-world/smartgo/markup/html"
 )

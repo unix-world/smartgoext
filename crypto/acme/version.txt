@@ -1,0 +1,7 @@
+v.20260915
+Go 1.26 or later
+
+golang.org/x/crypto v0.57.0
+
+# modified by unixman, changed EcDSA P256 with P384
+

@@ -1,0 +1,14 @@
+github.com/emersion/go-imap/v2 @head.20260831
+
+go 1.18
+
+require (
+	github.com/emersion/go-message
+	github.com/emersion/go-sasl
+)
+
+r.20260831
+refactored by unixman as:
+	github.com/smartgoext/cloud/imap
+
+

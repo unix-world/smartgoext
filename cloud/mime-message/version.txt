@@ -1,0 +1,11 @@
+github.com/emersion/go-message @head.20260831
+
+go 1.16
+
+require
+	golang.org/x/text
+
+contains fixes by unixman: # r.20260831
+	* unixman use io instead of io-util
+	* refactored as mime-message
+

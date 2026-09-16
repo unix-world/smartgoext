@@ -1,10 +1,10 @@
 
 // GO Lang :: SmartGo Extra :: Smart.Go.Framework
 // (c) 2021-present, unix-world.org
-// r.20260823.2358 :: STABLE
+// r.20260915.2358 :: STABLE
 // [ ARCHIVERS / XZ ]
 
-// REQUIRE: go 1.22 or later
+// REQUIRE: go 1.24 or later
 package smartgoext
 
 import (
@@ -60,10 +60,8 @@ func XzCompress(data []byte, level int, checksumMode string, verifyCompressed bo
 			xzChecksumMode = xz.CRC32
 			break
 		case "CRC64":
-		//	xzChecksumMode = xz.CRC64
-			break
 		default:
-			return nil, smart.NewError("Unsupported Checksum Mode: `" + checksumMode + "`")
+			// use default, CRC64
 	} //end switch
 	//--
 	var buf bytes.Buffer

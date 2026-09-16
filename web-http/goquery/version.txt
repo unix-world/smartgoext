@@ -1,4 +1,0 @@
-github.com/PuerkitoBio/goquery @head.20260224
-
-go 1.24
-

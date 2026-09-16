@@ -1,0 +1,13 @@
+github.com/emersion/go-msgauth @head.20260831
+
+go 1.18
+
+# modified by unixman:
+    * removed cmd (milter) which requires extra dependencies
+    * change dependency of ed25519 from x to go base
+
+contains fixes by unixman: # r.20260831
+	* unixman use io, os instead of io-util
+	* moved dmarc to SmartGo
+	* moved dkim to SmartGo
+

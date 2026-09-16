@@ -1,6 +1,6 @@
-github.com/emersion/go-ical @head.20251229
+github.com/emersion/go-ical @head.20260831
 
-go 1.13
+go 1.16
 
 require:
     github.com/teambition/rrule-go

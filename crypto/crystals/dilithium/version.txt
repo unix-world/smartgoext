@@ -1,11 +1,10 @@
-v.20231228
-includes security patches (kyberslash1, kyberslash2) by kudelskisecurity: r.20240929
-includes fixes by unixman
+
+github.com/kudelskisecurity/crystals-go/crystals-dilithium @head.20210705
+includes security patches (kyberslash1, kyberslash2) by kudelskisecurity: v.20240116
+
+includes fixes by unixman, r.20240929
 
 Go 1.16 or later
 
-github.com/kudelskisecurity/crystals-go/crystals-dilithium @head.20210705
-
 # refactored by unixman as:
 github.com/unix-world/smartgo/crystals-dilithium
-
